@@ -8,6 +8,13 @@
       "when": 1789167600000,
       "tag": "0000_version_readiness",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1789167660000,
+      "tag": "0001_property_ledger",
+      "breakpoints": true
     }
   ]
 }
