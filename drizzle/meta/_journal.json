@@ -15,6 +15,13 @@
       "when": 1789167660000,
       "tag": "0001_property_ledger",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1789167720000,
+      "tag": "0002_shr_2062_bom",
+      "breakpoints": true
     }
   ]
 }

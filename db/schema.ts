@@ -27,3 +27,27 @@ export const receiptReconciliation = sqliteTable("receipt_reconciliation", {
 export const propertyEvents = sqliteTable("property_events", {
   id: integer("id").primaryKey({ autoIncrement: true }), propertyItemId: integer("property_item_id").references(() => propertyItems.id), receiptId: integer("receipt_id").references(() => handReceipts.id), eventType: text("event_type").notNull(), occurredAt: text("occurred_at").notNull(), recordedBy: text("recorded_by").notNull(), details: text("details"),
 }, (t) => [index("idx_property_events_item_date").on(t.propertyItemId, t.occurredAt), index("idx_property_events_receipt").on(t.receiptId)]);
+
+export const shrSnapshots = sqliteTable("shr_snapshots", {
+  id: integer("id").primaryKey({ autoIncrement: true }), receiptId: integer("receipt_id").notNull().references(() => handReceipts.id), period: text("period").notNull(), effectiveDate: text("effective_date").notNull(), acceptedAt: text("accepted_at"), acceptedBy: text("accepted_by"), status: text("status").notNull().default("draft"), priorSnapshotId: integer("prior_snapshot_id"), addedCount: integer("added_count").notNull().default(0), removedCount: integer("removed_count").notNull().default(0), changedCount: integer("changed_count").notNull().default(0),
+}, (t) => [uniqueIndex("idx_shr_snapshot_period").on(t.period), index("idx_shr_snapshot_status").on(t.status)]);
+
+export const shrSnapshotItems = sqliteTable("shr_snapshot_items", {
+  id: integer("id").primaryKey({ autoIncrement: true }), snapshotId: integer("snapshot_id").notNull().references(() => shrSnapshots.id), propertyItemId: integer("property_item_id").references(() => propertyItems.id), lin: text("lin"), nsn: text("nsn"), serialNumber: text("serial_number"), nomenclature: text("nomenclature").notNull(), quantity: integer("quantity").notNull().default(1), changeType: text("change_type").notNull().default("unchanged"), reconciliationNote: text("reconciliation_note"),
+}, (t) => [index("idx_shr_items_snapshot").on(t.snapshotId), index("idx_shr_items_identity").on(t.serialNumber, t.nsn, t.lin)]);
+
+export const propertyLoans = sqliteTable("property_loans", {
+  id: integer("id").primaryKey({ autoIncrement: true }), receiptId: integer("receipt_id").references(() => handReceipts.id), direction: text("direction").notNull(), otherParty: text("other_party").notNull(), documentNumber: text("document_number"), signedDate: text("signed_date").notNull(), renewalDueDate: text("renewal_due_date").notNull(), closedDate: text("closed_date"), status: text("status").notNull().default("active"), notes: text("notes"),
+}, (t) => [index("idx_loans_direction_status").on(t.direction, t.status), index("idx_loans_renewal").on(t.renewalDueDate)]);
+
+export const loanItems = sqliteTable("loan_items", {
+  id: integer("id").primaryKey({ autoIncrement: true }), loanId: integer("loan_id").notNull().references(() => propertyLoans.id), propertyItemId: integer("property_item_id").references(() => propertyItems.id), lin: text("lin"), nsn: text("nsn"), serialNumber: text("serial_number"), nomenclature: text("nomenclature").notNull(), quantity: integer("quantity").notNull().default(1),
+}, (t) => [index("idx_loan_items_loan").on(t.loanId), index("idx_loan_items_serial").on(t.serialNumber)]);
+
+export const billsOfMaterials = sqliteTable("bills_of_materials", {
+  id: integer("id").primaryKey({ autoIncrement: true }), endItemNsn: text("end_item_nsn").notNull(), endItemLin: text("end_item_lin"), name: text("name").notNull(), revision: text("revision"), effectiveDate: text("effective_date"), sourceReceiptId: integer("source_receipt_id").references(() => handReceipts.id), status: text("status").notNull().default("active"),
+}, (t) => [index("idx_bom_end_item").on(t.endItemNsn, t.endItemLin)]);
+
+export const bomComponents = sqliteTable("bom_components", {
+  id: integer("id").primaryKey({ autoIncrement: true }), bomId: integer("bom_id").notNull().references(() => billsOfMaterials.id), parentComponentId: integer("parent_component_id"), nsn: text("nsn"), partNumber: text("part_number"), nomenclature: text("nomenclature").notNull(), requiredQuantity: integer("required_quantity").notNull().default(1), serialized: integer("serialized", { mode: "boolean" }).notNull().default(false), notes: text("notes"),
+}, (t) => [index("idx_bom_components_bom").on(t.bomId), index("idx_bom_components_parent").on(t.parentComponentId)]);

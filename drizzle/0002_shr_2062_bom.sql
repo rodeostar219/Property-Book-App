@@ -1,0 +1,17 @@
+CREATE TABLE `shr_snapshots` (`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,`receipt_id` integer NOT NULL,`period` text NOT NULL,`effective_date` text NOT NULL,`accepted_at` text,`accepted_by` text,`status` text DEFAULT 'draft' NOT NULL,`prior_snapshot_id` integer,`added_count` integer DEFAULT 0 NOT NULL,`removed_count` integer DEFAULT 0 NOT NULL,`changed_count` integer DEFAULT 0 NOT NULL,FOREIGN KEY (`receipt_id`) REFERENCES `hand_receipts`(`id`));
+CREATE UNIQUE INDEX `idx_shr_snapshot_period` ON `shr_snapshots` (`period`);
+CREATE INDEX `idx_shr_snapshot_status` ON `shr_snapshots` (`status`);
+CREATE TABLE `shr_snapshot_items` (`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,`snapshot_id` integer NOT NULL,`property_item_id` integer,`lin` text,`nsn` text,`serial_number` text,`nomenclature` text NOT NULL,`quantity` integer DEFAULT 1 NOT NULL,`change_type` text DEFAULT 'unchanged' NOT NULL,`reconciliation_note` text,FOREIGN KEY (`snapshot_id`) REFERENCES `shr_snapshots`(`id`),FOREIGN KEY (`property_item_id`) REFERENCES `property_items`(`id`));
+CREATE INDEX `idx_shr_items_snapshot` ON `shr_snapshot_items` (`snapshot_id`);
+CREATE INDEX `idx_shr_items_identity` ON `shr_snapshot_items` (`serial_number`,`nsn`,`lin`);
+CREATE TABLE `property_loans` (`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,`receipt_id` integer,`direction` text NOT NULL,`other_party` text NOT NULL,`document_number` text,`signed_date` text NOT NULL,`renewal_due_date` text NOT NULL,`closed_date` text,`status` text DEFAULT 'active' NOT NULL,`notes` text,FOREIGN KEY (`receipt_id`) REFERENCES `hand_receipts`(`id`));
+CREATE INDEX `idx_loans_direction_status` ON `property_loans` (`direction`,`status`);
+CREATE INDEX `idx_loans_renewal` ON `property_loans` (`renewal_due_date`);
+CREATE TABLE `loan_items` (`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,`loan_id` integer NOT NULL,`property_item_id` integer,`lin` text,`nsn` text,`serial_number` text,`nomenclature` text NOT NULL,`quantity` integer DEFAULT 1 NOT NULL,FOREIGN KEY (`loan_id`) REFERENCES `property_loans`(`id`),FOREIGN KEY (`property_item_id`) REFERENCES `property_items`(`id`));
+CREATE INDEX `idx_loan_items_loan` ON `loan_items` (`loan_id`);
+CREATE INDEX `idx_loan_items_serial` ON `loan_items` (`serial_number`);
+CREATE TABLE `bills_of_materials` (`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,`end_item_nsn` text NOT NULL,`end_item_lin` text,`name` text NOT NULL,`revision` text,`effective_date` text,`source_receipt_id` integer,`status` text DEFAULT 'active' NOT NULL,FOREIGN KEY (`source_receipt_id`) REFERENCES `hand_receipts`(`id`));
+CREATE INDEX `idx_bom_end_item` ON `bills_of_materials` (`end_item_nsn`,`end_item_lin`);
+CREATE TABLE `bom_components` (`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,`bom_id` integer NOT NULL,`parent_component_id` integer,`nsn` text,`part_number` text,`nomenclature` text NOT NULL,`required_quantity` integer DEFAULT 1 NOT NULL,`serialized` integer DEFAULT false NOT NULL,`notes` text,FOREIGN KEY (`bom_id`) REFERENCES `bills_of_materials`(`id`));
+CREATE INDEX `idx_bom_components_bom` ON `bom_components` (`bom_id`);
+CREATE INDEX `idx_bom_components_parent` ON `bom_components` (`parent_component_id`);
