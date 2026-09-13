@@ -7,10 +7,13 @@ import { catalogLineOrThrow } from "./workspace";
 import { demoIncomingEchoShr } from "./catalog";
 import { stencilDataUri } from "./picture-book";
 import {
+  ADD_TO_SIGNED_FOR_LABEL,
   bytesToBase64,
   DA2062_MAX_PDF_BYTES,
+  destinationLabel,
   enrichDa2062Lines,
   parseDa2062Pdf,
+  planDa2062Confirm,
   previewDa2062Conflicts,
   validateDa2062InDestination,
   type Da2062EnrichedLine,
@@ -25,8 +28,7 @@ import {
   writeInject,
   writePictureBook,
 } from "./store";
-import type { ElectronicShrLine, SectionLetter, SourceConflict } from "./types";
-import type { Da2062DestinationKind } from "./types";
+import type { Da2062DestinationKind, ElectronicShrLine, LineDisposition, SectionLetter, SourceConflict } from "./types";
 
 export type ActionResult =
   | { ok: true; message: string; injectId?: number; importId?: number }
@@ -272,25 +274,33 @@ export async function parseDa2062In(formData: FormData): Promise<ParseDa2062Resu
   return {
     ok: true,
     message:
-      "Parsed for confirm. Nothing was written to the hand receipt, Sub-hand receipt (SHR), or history. Confirm is required even when the parse is perfect.",
+      "Parsed for Confirm. Nothing was written to the hand receipt, Sub-hand receipt (SHR), or history. Confirm is required even when the parse is perfect.",
     draft,
     enriched,
     conflicts,
   };
 }
 
-export async function confirmDa2062In(draftJson: string): Promise<ActionResult> {
+export async function confirmDa2062In(
+  draftJson: string,
+  dispositionsJson: string,
+): Promise<ActionResult> {
   const blocked = await requireD1();
   if (blocked) return blocked;
   const actor = await getActor();
   let draft: Da2062InDraft;
+  let dispositions: LineDisposition[];
   try {
     draft = JSON.parse(draftJson) as Da2062InDraft;
+    dispositions = JSON.parse(dispositionsJson) as LineDisposition[];
   } catch {
     return fail("Confirm payload is not valid JSON. Nothing was written.");
   }
   if (!draft?.lines?.length || !draft.uic) {
     return fail("Confirm payload is incomplete. Nothing was written.");
+  }
+  if (!Array.isArray(dispositions) || dispositions.length !== draft.lines.length) {
+    return fail("Per-line accept / skip / flag is required. Nothing was written.");
   }
   const check = validateDa2062InDestination({
     actor,
@@ -300,7 +310,17 @@ export async function confirmDa2062In(draftJson: string): Promise<ActionResult> 
   });
   if (!check.ok) return fail(check.message);
 
-  const result = await writeDa2062In({ draft, actorName: actor.fullName });
+  const plan = planDa2062Confirm({
+    lines: draft.lines,
+    dispositions,
+    conflicts: previewDa2062Conflicts(draft),
+    sectionLetter: draft.destinationSection,
+  });
+  if (!plan.willWrite) {
+    return fail("Cancel / all lines skipped. No rows written.");
+  }
+
+  const result = await writeDa2062In({ draft, dispositions, actorName: actor.fullName });
   revalidatePath("/receipts/2062-in");
   revalidatePath(`/receipts/2062-in/history/${result.importId}`);
   revalidatePath("/exceptions");
@@ -308,9 +328,10 @@ export async function confirmDa2062In(draftJson: string): Promise<ActionResult> 
   revalidatePath("/documents");
   revalidatePath("/");
   if (draft.destinationSection) revalidatePath(`/sections/${draft.destinationSection}`);
+  revalidatePath("/my-property");
   return {
     ok: true,
     importId: result.importId,
-    message: `DA Form 2062 in written as history #${result.importId}. Source PDF attached. ${result.discrepancyKeys.length} conflict${result.discrepancyKeys.length === 1 ? "" : "s"} opened as discrepancies. Accountability lines were not auto-merged.`,
+    message: `${ADD_TO_SIGNED_FOR_LABEL}: ${result.acceptedCount} line${result.acceptedCount === 1 ? "" : "s"} added to ${destinationLabel(draft.destinationKind, draft.destinationSection)}. History #${result.importId} asserted in D1. ${result.discrepancyKeys.length} discrepancy${result.discrepancyKeys.length === 1 ? "" : "ies"} opened. Not Accept theater.`,
   };
 }

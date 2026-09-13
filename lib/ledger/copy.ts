@@ -24,7 +24,8 @@ export const DA_2062_TITLE = "DA Form 2062";
 export const DA_2062_SUBTITLE = "Hand Receipt/Shortage Listing";
 export const DA_2062_IN_TITLE = "DA Form 2062 in";
 export const DA_2062_IN_NOTE =
-  "Scan / import IN only. Confirm is required before any write. Companion to GCSS-Army / APSR — a PDF does not invent formal APSR accountability.";
+  "Scan / import IN only. Confirm before write. Success adds to signed-for plus history — not Accept theater. Companion to GCSS-Army / APSR — a PDF does not invent formal APSR accountability.";
+export const ADD_TO_SIGNED_FOR = "Add to signed-for";
 
 export const COMPANION_NOTE = COMPANION_DISCLAIMER;
 export const INJECT_FEED_LABEL = INJECT_LABEL;

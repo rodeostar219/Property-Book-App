@@ -26,6 +26,8 @@ export type Da2062DestinationKind = "oda_hr" | "section_shr";
 
 export type Da2062Direction = "in";
 
+export type LineDisposition = "accept" | "skip" | "flag";
+
 export type InjectChangeType = "added" | "removed" | "changed" | "unchanged";
 
 export type DiscrepancySeverity = "Review" | "Missing data" | "Shortage";

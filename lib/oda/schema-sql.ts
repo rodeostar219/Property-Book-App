@@ -176,6 +176,7 @@ CREATE TABLE IF NOT EXISTS da2062_import_lines (
   section_letter text,
   line_key text,
   confidence text DEFAULT 'high' NOT NULL,
+  disposition text DEFAULT 'accept' NOT NULL,
   FOREIGN KEY (import_id) REFERENCES da2062_imports(id)
 );
 CREATE INDEX IF NOT EXISTS idx_da2062_lines_import ON da2062_import_lines (import_id);

@@ -235,6 +235,7 @@ export const da2062ImportLines = sqliteTable("da2062_import_lines", {
   sectionLetter: text("section_letter"),
   lineKey: text("line_key"),
   confidence: text("confidence").notNull().default("high"),
+  disposition: text("disposition").notNull().default("accept"),
 }, (t) => [index("idx_da2062_lines_import").on(t.importId)]);
 
 export const custodyInEvents = sqliteTable("custody_in_events", {

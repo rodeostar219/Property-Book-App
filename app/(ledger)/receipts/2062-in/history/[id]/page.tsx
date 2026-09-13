@@ -28,7 +28,7 @@ export default async function Da2062InHistoryPage({
       <CompanionBanner persistence={persistence} />
       <PageHeader
         title={record.filename}
-        description="Confirmed DA Form 2062 in. Responsibility / custody-in event. Not APSR accountability and not Accept theater."
+        description="Added to signed-for plus history. Not Accept theater. Companion to GCSS-Army / APSR — does not invent APSR accountability."
         meta={`${record.importedBy} · ${record.importedAt}${record.priorImportId ? ` · prior #${record.priorImportId}` : " · no prior"}`}
       />
       <section className="panel">
@@ -73,6 +73,7 @@ export default async function Da2062InHistoryPage({
                 <th>NSN</th>
                 <th>Serial</th>
                 <th>Qty</th>
+                <th>Line action</th>
               </tr>
             </thead>
             <tbody>
@@ -97,12 +98,21 @@ export default async function Da2062InHistoryPage({
                     <strong>{formatSerial(line.serial)}</strong>
                   </td>
                   <td>{line.quantity}</td>
+                  <td>
+                    <span className={`pill ${line.disposition === "accept" ? "green" : line.disposition === "flag" ? "amber" : "blue"}`}>
+                      {line.disposition === "accept"
+                        ? "Added to signed-for"
+                        : line.disposition === "flag"
+                          ? "Flagged"
+                          : "Skipped"}
+                    </span>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        <h3 className="section-label">Custody-in events</h3>
+        <h3 className="section-label">Signed-for additions</h3>
         <div className="change-list">
           {events.map((event, index) => (
             <article key={`${event.nsn}-${event.serial}-${index}`}>
@@ -126,6 +136,14 @@ export default async function Da2062InHistoryPage({
         ) : null}
       </section>
       <p className="slice-stub">
+        {record.destinationSection ? (
+          <>
+            <Link href={`/sections/${record.destinationSection}`}>
+              Open section Sub-hand receipt (SHR)
+            </Link>
+            {" · "}
+          </>
+        ) : null}
         <Link href="/receipts/2062-in">Back to 2062 in</Link>
         {" · "}
         <Link href="/exceptions">Open discrepancies</Link>

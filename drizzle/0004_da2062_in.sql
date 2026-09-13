@@ -40,6 +40,7 @@ CREATE TABLE `da2062_import_lines` (
   `section_letter` text,
   `line_key` text,
   `confidence` text DEFAULT 'high' NOT NULL,
+  `disposition` text DEFAULT 'accept' NOT NULL,
   FOREIGN KEY (`import_id`) REFERENCES `da2062_imports`(`id`)
 );
 --> statement-breakpoint
