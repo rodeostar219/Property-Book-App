@@ -13,7 +13,7 @@ Living project tracking for the ODA operational property workspace.
 | [SPRINTS.md](./SPRINTS.md) | Andrew / Bob | Sprint status & links |
 | [DECISIONS.md](./DECISIONS.md) | Bob | Ryan decisions log |
 | [LAYERED-MODEL.md](./LAYERED-MODEL.md) | Debra / Andrew | Accountability layers |
-| [UX-FLOWS.md](./UX-FLOWS.md) | Ben | Soldier / section UX |
+| [UX-FLOWS.md](./UX-FLOWS.md) | Ben | Soldier / section UX — Ben owns it; tracks Sprint 1 done + Sprint 2 confirm-screen lock |
 | [QA-DOD.md](./QA-DOD.md) | Chelse | QA gates & DoD |
 
 Update after every merge and major Ryan decision. Keep concise.
