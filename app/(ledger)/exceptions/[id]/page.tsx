@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { DisabledAction } from "@/components/ledger/disabled-action";
 import { ExceptionChip } from "@/components/ledger/status-chip";
 import { PageHeader } from "@/components/ledger/page-header";
-import { NOT_WIRED } from "@/lib/ledger/copy";
+import { formatSerial, NOT_WIRED } from "@/lib/ledger/copy";
 import { getException, getPropertyItem } from "@/lib/ledger/queries";
 
 export const dynamic = "force-dynamic";
@@ -30,7 +30,7 @@ export default async function ExceptionDetailPage({
         <dl className="detail-list">
           <div>
             <dt>Serial</dt>
-            <dd>{row.serial}</dd>
+            <dd>{formatSerial(row.serial)}</dd>
           </div>
           <div>
             <dt>Next action</dt>

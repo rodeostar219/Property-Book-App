@@ -67,7 +67,7 @@ export type PropertyItem = {
 export type LedgerException = {
   id: string;
   itemId: string | null;
-  serial: string;
+  serial: string | null;
   item: string;
   issue: string;
   action: string;

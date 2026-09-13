@@ -3,7 +3,7 @@ import { AlertTriangle, Package } from "lucide-react";
 import { Metric } from "@/components/ledger/metric";
 import { PageHeader } from "@/components/ledger/page-header";
 import { StatusChip } from "@/components/ledger/status-chip";
-import { UNIT } from "@/lib/ledger/copy";
+import { formatSerial, UNIT } from "@/lib/ledger/copy";
 import { soldierAssignedSerials } from "@/lib/ledger/fixtures";
 import type { Actor, LedgerException, PropertyItem } from "@/lib/ledger/types";
 
@@ -53,7 +53,7 @@ export function SoldierHome({
               <li key={item.id}>
                 <Link href={`/items/${item.id}`}>
                   <b>{item.name}</b>
-                  <span>{item.serial ?? "No serial"}</span>
+                  <span>{formatSerial(item.serial)}</span>
                 </Link>
                 <StatusChip item={item} />
               </li>

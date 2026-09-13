@@ -3,7 +3,7 @@ import { AlertTriangle, Download } from "lucide-react";
 import { DisabledAction } from "@/components/ledger/disabled-action";
 import { ExceptionChip } from "@/components/ledger/status-chip";
 import { PageHeader } from "@/components/ledger/page-header";
-import { NOT_WIRED } from "@/lib/ledger/copy";
+import { formatSerial, NOT_WIRED } from "@/lib/ledger/copy";
 import { getActor } from "@/lib/ledger/identity";
 import { getExceptionsFor } from "@/lib/ledger/queries";
 
@@ -40,7 +40,7 @@ export default async function ExceptionsPage() {
             <div>
               <h3>
                 <Link href={`/exceptions/${row.id}`}>{row.item}</Link>
-                <code>{row.serial}</code>
+                <code>{formatSerial(row.serial)}</code>
               </h3>
               <p>{row.issue}</p>
               <small>Next action: {row.action}</small>

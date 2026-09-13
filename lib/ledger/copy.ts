@@ -33,6 +33,11 @@ export const NOT_WIRED = {
   addNote: "Notes are not persisted in Slice A.",
 } as const;
 
+export function formatSerial(serial: string | null | undefined): string {
+  if (!serial || serial === "—") return "not recorded";
+  return serial;
+}
+
 export const STATUS_LABEL: Record<
   import("./types").AccountabilityStatus,
   string

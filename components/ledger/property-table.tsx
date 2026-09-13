@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Checkbox } from "@/components/ui/checkbox";
 import { StatusChip } from "@/components/ledger/status-chip";
+import { formatSerial } from "@/lib/ledger/copy";
 import type { PropertyItem } from "@/lib/ledger/types";
 
 export function PropertyTable({
@@ -57,7 +58,7 @@ export function PropertyTable({
                 </Link>
               </td>
               <td>
-                <strong>{item.serial ?? "—"}</strong>
+                <strong>{formatSerial(item.serial)}</strong>
               </td>
               <td>{item.accountabilityClass}</td>
               <td>{item.networkClassification}</td>

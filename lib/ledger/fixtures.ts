@@ -274,7 +274,7 @@ export const exceptions: LedgerException[] = [
   {
     id: "exc-3",
     itemId: "4",
-    serial: "—",
+    serial: null,
     item: "BHI Mini-SATCOM Antenna Kit",
     issue: "Receipt quantity 1; serial field is blank",
     action: "Physically verify serial or mark non-serialized",

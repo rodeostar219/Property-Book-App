@@ -5,7 +5,7 @@ import { DisabledAction } from "@/components/ledger/disabled-action";
 import { PageHeader } from "@/components/ledger/page-header";
 import { PhrhChrome } from "@/components/ledger/phrh-note";
 import { StatusChip } from "@/components/ledger/status-chip";
-import { NOT_WIRED } from "@/lib/ledger/copy";
+import { formatSerial, NOT_WIRED } from "@/lib/ledger/copy";
 import { getPropertyItem } from "@/lib/ledger/queries";
 
 export const dynamic = "force-dynamic";
@@ -26,7 +26,7 @@ export default async function ItemPage({
     <>
       <PageHeader
         title={item.name}
-        description={`${item.nsn} · serial ${item.serial ?? "not recorded"}`}
+        description={`${item.nsn} · serial ${formatSerial(item.serial)}`}
         meta="Slice A chrome only. Overview / Custody / History land in Slice B."
         actions={
           <>
@@ -63,7 +63,7 @@ export default async function ItemPage({
             </div>
             <div>
               <dt>Serial</dt>
-              <dd>{item.serial ?? "—"}</dd>
+              <dd>{formatSerial(item.serial)}</dd>
             </div>
             <div>
               <dt>Accountability class</dt>
