@@ -86,6 +86,8 @@ export function Da2062InPanel({ actor, persistence, defaultKind, defaultSection 
     const echo: { name: Da2062FixtureName; label: string }[] = [
       { name: "electronic-echo", label: "Electronic Echo sample" },
       { name: "ocr-echo", label: "Scanned / OCR Echo sample" },
+      { name: "wrong-section-bravo", label: "Bravo sample (expect reject)" },
+      { name: "cross-uic", label: "Cross-UIC sample (expect reject)" },
     ];
     if (canOdaHr) echo.push({ name: "electronic-oda-hr", label: "Electronic ODA HR sample" });
     return echo;
