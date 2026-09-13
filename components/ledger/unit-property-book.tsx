@@ -27,7 +27,7 @@ export function UnitPropertyBook({ items }: { items: PropertyItem[] }) {
       items.filter((item) => {
         const matchesFilter = filter === "All status" || item.status === filter;
         const haystack =
-          `${item.name} ${item.serial ?? ""} ${item.nsn} ${item.assignedToName ?? ""} ${item.location}`.toLowerCase();
+          `${item.name} ${item.officialName ?? ""} ${item.commonName ?? ""} ${item.serial ?? ""} ${item.nsn} ${item.assignedToName ?? ""} ${item.sectionLetter ?? ""} ${item.location}`.toLowerCase();
         return matchesFilter && haystack.includes(query.toLowerCase());
       }),
     [filter, items, query],
@@ -36,8 +36,8 @@ export function UnitPropertyBook({ items }: { items: PropertyItem[] }) {
   return (
     <>
       <PageHeader
-        title="Unit property"
-        description="Hand-receipt lines for the organization. Accountability class and SIPR/NIPR are separate columns."
+        title="ODA property"
+        description="ODA hand-receipt lines by section. Accountability class and SIPR/NIPR stay separate. This is not a flattened property_item bag."
         actions={
           <DisabledAction
             label="Add property"

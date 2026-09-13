@@ -27,16 +27,16 @@ export function PmHome({
   return (
     <>
       <PageHeader
-        title="Unit home"
-        description="Property Manager attention — the unit book lives under Unit property, not here."
-        meta={`${UNIT.uic} ${UNIT.name} · signed in as ${actor.fullName}`}
+        title="ODA home"
+        description="Property Manager attention — the ODA book lives under ODA property, not here."
+        meta={`${UNIT.uic} ${UNIT.name} · ${UNIT.group} · ${UNIT.installation} · ${actor.fullName}`}
         actions={<CurrentBadge>Hand receipt current</CurrentBadge>}
       />
       <div className="metrics">
         <Metric
-          label="UNIT PROPERTY"
+          label="ODA PROPERTY"
           value={String(itemCount)}
-          note="Demo fixture lines"
+          note="Accountability lines on the ODA hand receipt"
           icon={Boxes}
           tone="teal"
         />
@@ -86,7 +86,7 @@ export function PmHome({
           <div className="panel-head">
             <div>
               <h2>PM shortcuts</h2>
-              <p>Unit book and receipt tools</p>
+              <p>ODA book, sections, and electronic SHR inject</p>
             </div>
           </div>
           <article>
@@ -95,9 +95,9 @@ export function PmHome({
             </span>
             <div>
               <b>
-                <Link href="/property">Unit property</Link>
+                <Link href="/property">ODA property</Link>
               </b>
-              <p>Full hand-receipt lines for {UNIT.uic}</p>
+              <p>UIC {UNIT.uic} · all section Sub-hand receipts (SHR)</p>
             </div>
           </article>
           <article>
@@ -108,7 +108,7 @@ export function PmHome({
               <b>
                 <Link href="/receipts">Hand receipts</Link>
               </b>
-              <p>Unit hand receipt and Sub-hand receipt (SHR) snapshots</p>
+              <p>ODA hand receipt and Sub-hand receipt (SHR) inject history</p>
             </div>
           </article>
           <article>

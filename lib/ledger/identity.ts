@@ -1,9 +1,13 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getChatGPTUser, type ChatGPTUser } from "@/app/chatgpt-auth";
-import { DEMO_ROLE_COOKIE } from "./constants";
-import { DEMO_PM, DEMO_SOLDIER } from "./fixtures";
-import type { Actor, AppRole } from "./types";
+import { PEOPLE } from "@/lib/oda/catalog";
+import { DEMO_IDENTITY_COOKIE, DEMO_ROLE_COOKIE } from "./constants";
+import type { Actor, AppRole, DemoIdentity } from "./types";
+
+function isIdentity(value: string | undefined): value is DemoIdentity {
+  return value === "echo" || value === "bravo" || value === "pm";
+}
 
 function isAppRole(value: string | undefined): value is AppRole {
   return value === "soldier" || value === "pm";
@@ -12,6 +16,54 @@ function isAppRole(value: string | undefined): value is AppRole {
 function looksLikePm(user: ChatGPTUser): boolean {
   const haystack = `${user.email} ${user.displayName} ${user.fullName ?? ""}`.toLowerCase();
   return haystack.includes("ortiz") || haystack.includes("property manager");
+}
+
+function actorFromIdentity(identity: DemoIdentity): Actor {
+  if (identity === "bravo") {
+    const person = PEOPLE.vargas;
+    return {
+      id: person.id,
+      displayName: person.displayName,
+      fullName: person.fullName,
+      initials: person.initials,
+      role: "soldier",
+      email: person.email,
+      grade: person.grade,
+      mos: person.mos,
+      sectionLetter: "B",
+      scope: "section",
+      identity: "bravo",
+    };
+  }
+  if (identity === "pm") {
+    const person = PEOPLE.ortiz;
+    return {
+      id: person.id,
+      displayName: person.displayName,
+      fullName: person.fullName,
+      initials: person.initials,
+      role: "pm",
+      email: person.email,
+      grade: person.grade,
+      mos: person.mos,
+      scope: "oda",
+      identity: "pm",
+    };
+  }
+  const person = PEOPLE.ryan;
+  return {
+    id: person.id,
+    displayName: person.displayName,
+    fullName: person.fullName,
+    initials: person.initials,
+    role: "soldier",
+    email: person.email,
+    grade: person.grade,
+    mos: person.mos,
+    sectionLetter: "E",
+    scope: "section",
+    identity: "echo",
+  };
 }
 
 function overlayIdentity(base: Actor, user: ChatGPTUser | null): Actor {
@@ -34,15 +86,18 @@ function overlayIdentity(base: Actor, user: ChatGPTUser | null): Actor {
 export async function getActor(): Promise<Actor> {
   const user = await getChatGPTUser();
   const store = await cookies();
-  const override = store.get(DEMO_ROLE_COOKIE)?.value;
-  const role: AppRole = isAppRole(override)
-    ? override
-    : user && looksLikePm(user)
-      ? "pm"
-      : "soldier";
-
-  const fixture = role === "pm" ? DEMO_PM : DEMO_SOLDIER;
-  return overlayIdentity(fixture, user);
+  const identityCookie = store.get(DEMO_IDENTITY_COOKIE)?.value;
+  const roleCookie = store.get(DEMO_ROLE_COOKIE)?.value;
+  const identity: DemoIdentity = isIdentity(identityCookie)
+    ? identityCookie
+    : isAppRole(roleCookie)
+      ? roleCookie === "pm"
+        ? "pm"
+        : "echo"
+      : user && looksLikePm(user)
+        ? "pm"
+        : "echo";
+  return overlayIdentity(actorFromIdentity(identity), user);
 }
 
 export async function requirePm(): Promise<Actor> {

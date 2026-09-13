@@ -15,7 +15,7 @@ export default async function DocumentsPage() {
     <>
       <PageHeader
         title="Documents"
-        description="Source hand receipts, Sub-hand receipts (SHR), and DA Form 2062 files in the fixture set."
+        description="Source hand receipts and electronic Sub-hand receipts (SHR). Scanned DA Form 2062 attach is Sprint 2."
         actions={
           <DisabledAction
             label="Import document"

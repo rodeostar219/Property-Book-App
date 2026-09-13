@@ -1,30 +1,33 @@
 import { Download, Plus, UploadCloud } from "lucide-react";
+import { CompanionBanner } from "@/components/ledger/companion-banner";
 import { DisabledAction } from "@/components/ledger/disabled-action";
 import { PageHeader } from "@/components/ledger/page-header";
 import { PropertyTable } from "@/components/ledger/property-table";
 import { NOT_WIRED } from "@/lib/ledger/copy";
 import { getActor } from "@/lib/ledger/identity";
-import { getMyProperty } from "@/lib/ledger/queries";
+import { loadWorkspace } from "@/lib/oda/workspace";
 
 export const dynamic = "force-dynamic";
 
 export default async function MyPropertyPage() {
   const actor = await getActor();
-  const items = getMyProperty(actor);
+  const workspace = await loadWorkspace(actor);
+  const items = workspace.items;
 
   return (
     <>
+      <CompanionBanner persistence={workspace.persistence} />
       <PageHeader
-        title="My property"
+        title={actor.scope === "section" ? "My section" : "My property"}
         description={
           actor.role === "pm"
-            ? "End items you personally signed for. The unit book is under Unit property."
-            : "End items on your Sub-hand receipt (SHR). A SHR does not replace the unit book."
+            ? "End items you personally signed for. The ODA book is under ODA property."
+            : `End items on the ${actor.sectionLetter ? `${actor.sectionLetter} section` : ""} Sub-hand receipt (SHR). A SHR does not replace the ODA book.`
         }
         meta={
           items.length === 0
-            ? "No personal signed-for lines on this fixture"
-            : `${items.length} signed-for end item${items.length === 1 ? "" : "s"}`
+            ? "No section lines visible to this identity"
+            : `${items.length} line${items.length === 1 ? "" : "s"} · section isolation is on`
         }
         actions={
           <>
@@ -56,8 +59,8 @@ export default async function MyPropertyPage() {
           items={items}
           empty={
             actor.role === "pm"
-              ? "This Property Manager fixture has no personal signed-for lines. Use Unit property for the book."
-              : "No property is assigned to this Soldier fixture."
+              ? "This Property Manager identity has no personal signed-for lines. Use ODA property for the book."
+              : "No property is visible on this section Sub-hand receipt (SHR)."
           }
         />
       </section>

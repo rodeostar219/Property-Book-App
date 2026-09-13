@@ -4,8 +4,10 @@ import {
   ClipboardList,
   FileArchive,
   Home,
+  Images,
   Package,
   ScrollText,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 import type { AppRole } from "./types";
@@ -20,14 +22,16 @@ export type NavItem = {
 
 export const soldierNav: NavItem[] = [
   { href: "/", label: "Home", icon: Home },
-  { href: "/my-property", label: "My property", icon: Package },
+  { href: "/my-property", label: "My section", icon: Package },
+  { href: "/sections", label: "ODA sections", icon: Users },
   { href: "/exceptions", label: "Exceptions", icon: AlertTriangle, badgeKey: "exceptions" },
 ];
 
 export const pmNav: NavItem[] = [
   { href: "/", label: "Home", icon: Home },
   { href: "/my-property", label: "My property", icon: Package },
-  { href: "/property", label: "Unit property", icon: Boxes, pmOnly: true },
+  { href: "/property", label: "ODA property", icon: Boxes, pmOnly: true },
+  { href: "/sections", label: "Sections", icon: Users },
   { href: "/receipts", label: "Hand receipts", icon: ClipboardList, pmOnly: true },
   { href: "/loans", label: "DA Form 2062", icon: ScrollText, pmOnly: true },
   { href: "/exceptions", label: "Exceptions", icon: AlertTriangle, badgeKey: "exceptions" },
@@ -41,15 +45,20 @@ export function navForRole(role: AppRole): NavItem[] {
 export function pageTitleForPath(pathname: string): string {
   const exact: Record<string, string> = {
     "/": "Home",
-    "/my-property": "My property",
-    "/property": "Unit property",
+    "/my-property": "My section",
+    "/property": "ODA property",
+    "/sections": "ODA sections",
     "/receipts": "Hand receipts",
     "/loans": "DA Form 2062",
     "/exceptions": "Exceptions",
     "/documents": "Documents",
   };
   if (exact[pathname]) return exact[pathname];
-  if (pathname.startsWith("/items/")) return "End item";
-  if (pathname.startsWith("/exceptions/")) return "Exception";
-  return "Property Ledger";
+  if (pathname.startsWith("/items/") || pathname.startsWith("/lines/")) return "Hand-receipt line";
+  if (pathname.startsWith("/exceptions/")) return "Discrepancy";
+  if (pathname.startsWith("/sections/")) return "Section Sub-hand receipt";
+  if (pathname.startsWith("/receipts/history")) return "SHR inject history";
+  return "ODA Property Workspace";
 }
+
+export const pictureBookNavHint = Images;

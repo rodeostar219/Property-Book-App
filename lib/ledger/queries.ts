@@ -1,11 +1,5 @@
-import {
-  documents,
-  exceptions,
-  loans,
-  propertyItems,
-  receiptPeriods,
-  receipts,
-} from "./fixtures";
+import { canViewSection } from "@/lib/oda/access";
+import { documents, exceptions, loans, propertyItems, receiptPeriods, receipts } from "./fixtures";
 import type { Actor, LedgerException, PropertyItem } from "./types";
 
 export function getPropertyItem(id: string): PropertyItem | undefined {
@@ -13,23 +7,31 @@ export function getPropertyItem(id: string): PropertyItem | undefined {
 }
 
 export function getMyProperty(actor: Actor): PropertyItem[] {
+  if (actor.scope === "section" && actor.sectionLetter) {
+    return propertyItems.filter((item) => item.sectionLetter === actor.sectionLetter);
+  }
   return propertyItems.filter((item) => item.assignedToId === actor.id);
 }
 
-export function getUnitProperty(): PropertyItem[] {
-  return propertyItems;
+export function getUnitProperty(actor?: Actor): PropertyItem[] {
+  if (!actor || actor.role === "pm" || actor.scope === "oda") return propertyItems;
+  return propertyItems.filter(
+    (item) => item.sectionLetter && canViewSection(actor, item.sectionLetter),
+  );
 }
 
 export function getExceptionsFor(actor: Actor): LedgerException[] {
-  if (actor.role === "pm") return exceptions;
-  return exceptions.filter(
-    (row) =>
+  if (actor.role === "pm" || actor.scope === "oda") return exceptions;
+  return exceptions.filter((row) => {
+    if (row.sectionLetter) return canViewSection(actor, row.sectionLetter);
+    return (
       row.assignedToId === actor.id ||
       (row.itemId &&
         propertyItems.some(
           (item) => item.id === row.itemId && item.assignedToId === actor.id,
-        )),
-  );
+        ))
+    );
+  });
 }
 
 export function getException(id: string): LedgerException | undefined {

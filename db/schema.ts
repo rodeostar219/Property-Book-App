@@ -51,3 +51,145 @@ export const billsOfMaterials = sqliteTable("bills_of_materials", {
 export const bomComponents = sqliteTable("bom_components", {
   id: integer("id").primaryKey({ autoIncrement: true }), bomId: integer("bom_id").notNull().references(() => billsOfMaterials.id), parentComponentId: integer("parent_component_id"), nsn: text("nsn"), partNumber: text("part_number"), nomenclature: text("nomenclature").notNull(), requiredQuantity: integer("required_quantity").notNull().default(1), serialized: integer("serialized", { mode: "boolean" }).notNull().default(false), notes: text("notes"),
 }, (t) => [index("idx_bom_components_bom").on(t.bomId), index("idx_bom_components_parent").on(t.parentComponentId)]);
+
+export const odaUnits = sqliteTable("oda_units", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  uic: text("uic").notNull(),
+  name: text("name").notNull(),
+  groupName: text("group_name").notNull(),
+  installation: text("installation").notNull(),
+  documentNumber: text("document_number").notNull(),
+  phrhName: text("phrh_name").notNull(),
+});
+
+export const odaSections = sqliteTable("oda_sections", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  unitId: integer("unit_id").notNull().references(() => odaUnits.id),
+  letter: text("letter").notNull(),
+  name: text("name").notNull(),
+  mos: text("mos").notNull(),
+  specialty: text("specialty").notNull(),
+  shrHolderKey: text("shr_holder_key"),
+}, (t) => [uniqueIndex("idx_oda_sections_letter").on(t.unitId, t.letter)]);
+
+export const accountabilityLines = sqliteTable("accountability_lines", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  key: text("key").notNull(),
+  unitId: integer("unit_id").notNull().references(() => odaUnits.id),
+  lin: text("lin"),
+  nsn: text("nsn").notNull(),
+  officialNomenclature: text("official_nomenclature").notNull(),
+  quantity: integer("quantity").notNull().default(1),
+  serialNumber: text("serial_number"),
+  accountabilityClass: text("accountability_class").notNull(),
+  networkClassification: text("network_classification").notNull(),
+  location: text("location"),
+  status: text("status").notNull().default("on_hand"),
+  sectionLetter: text("section_letter").notNull(),
+  shrHolderKey: text("shr_holder_key"),
+}, (t) => [
+  uniqueIndex("idx_acct_line_key").on(t.key),
+  index("idx_acct_line_section").on(t.sectionLetter),
+  index("idx_acct_line_serial").on(t.serialNumber),
+]);
+
+export const componentFacts = sqliteTable("component_facts", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  lineKey: text("line_key").notNull(),
+  kind: text("kind").notNull(),
+  nomenclature: text("nomenclature").notNull(),
+  requiredQuantity: integer("required_quantity").notNull().default(1),
+  onHandQuantity: integer("on_hand_quantity").notNull().default(0),
+  serialized: integer("serialized", { mode: "boolean" }).notNull().default(false),
+}, (t) => [index("idx_component_facts_line").on(t.lineKey)]);
+
+export const trackerFacts = sqliteTable("tracker_facts", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  key: text("key").notNull(),
+  nsn: text("nsn").notNull(),
+  serialNumber: text("serial_number"),
+  nomenclature: text("nomenclature").notNull(),
+  quantity: integer("quantity").notNull().default(1),
+  trackerName: text("tracker_name").notNull(),
+  sectionLetter: text("section_letter"),
+});
+
+export const packingFacts = sqliteTable("packing_facts", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  key: text("key").notNull(),
+  nsn: text("nsn").notNull(),
+  serialNumber: text("serial_number"),
+  nomenclature: text("nomenclature").notNull(),
+  quantity: integer("quantity").notNull().default(1),
+  documentLabel: text("document_label").notNull(),
+  sectionLetter: text("section_letter").notNull(),
+});
+
+export const pictureBookEntries = sqliteTable("picture_book_entries", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  accountabilityLineKey: text("accountability_line_key").notNull(),
+  officialName: text("official_name").notNull(),
+  commonName: text("common_name").notNull(),
+  photoKey: text("photo_key"),
+  photoData: text("photo_data"),
+  photoContentType: text("photo_content_type"),
+  photoUpdatedAt: text("photo_updated_at"),
+  photoUpdatedBy: text("photo_updated_by"),
+}, (t) => [uniqueIndex("idx_picture_book_line").on(t.accountabilityLineKey)]);
+
+export const shrInjects = sqliteTable("shr_injects", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  unitId: integer("unit_id").notNull(),
+  sectionLetter: text("section_letter"),
+  label: text("label").notNull(),
+  injectedAt: text("injected_at").notNull(),
+  injectedBy: text("injected_by").notNull(),
+  sourceKind: text("source_kind").notNull().default("electronic_shr"),
+  priorInjectId: integer("prior_inject_id"),
+  addedCount: integer("added_count").notNull().default(0),
+  removedCount: integer("removed_count").notNull().default(0),
+  changedCount: integer("changed_count").notNull().default(0),
+  unchangedCount: integer("unchanged_count").notNull().default(0),
+  notes: text("notes"),
+}, (t) => [index("idx_shr_injects_section_date").on(t.sectionLetter, t.injectedAt)]);
+
+export const shrInjectLines = sqliteTable("shr_inject_lines", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  injectId: integer("inject_id").notNull().references(() => shrInjects.id),
+  changeType: text("change_type").notNull(),
+  lineKey: text("line_key"),
+  lin: text("lin"),
+  nsn: text("nsn"),
+  serialNumber: text("serial_number"),
+  nomenclature: text("nomenclature").notNull(),
+  quantity: integer("quantity").notNull().default(1),
+  priorNomenclature: text("prior_nomenclature"),
+  priorQuantity: integer("prior_quantity"),
+  priorSerial: text("prior_serial"),
+  sectionLetter: text("section_letter"),
+}, (t) => [index("idx_shr_inject_lines_inject").on(t.injectId)]);
+
+export const sourceDiscrepancies = sqliteTable("source_discrepancies", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  publicKey: text("public_key").notNull(),
+  unitId: integer("unit_id").notNull(),
+  identityKey: text("identity_key").notNull(),
+  nsn: text("nsn"),
+  serialNumber: text("serial_number"),
+  lin: text("lin"),
+  sectionLetter: text("section_letter"),
+  sourceA: text("source_a").notNull(),
+  sourceB: text("source_b").notNull(),
+  factA: text("fact_a").notNull(),
+  factB: text("fact_b").notNull(),
+  issue: text("issue").notNull(),
+  action: text("action").notNull(),
+  severity: text("severity").notNull(),
+  status: text("status").notNull().default("open"),
+  itemKey: text("item_key"),
+  createdAt: text("created_at").notNull(),
+  createdBy: text("created_by").notNull(),
+}, (t) => [
+  uniqueIndex("idx_source_disc_key").on(t.publicKey),
+  index("idx_source_disc_section").on(t.sectionLetter, t.status),
+]);
