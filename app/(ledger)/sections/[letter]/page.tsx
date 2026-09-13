@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { CompanionBanner } from "@/components/ledger/companion-banner";
 import { InjectPanel } from "@/components/ledger/inject-panel";
 import { PageHeader } from "@/components/ledger/page-header";
+import { Button } from "@/components/ui/button";
 import { PhrhChrome } from "@/components/ledger/phrh-note";
 import { PropertySearch } from "@/components/ledger/property-search";
 import { SectionSwitcher } from "@/components/ledger/section-switcher";
@@ -52,6 +53,11 @@ export default async function SectionPage({
         title={sectionTitle(letter)}
         description={`Section Sub-hand receipt (SHR) under the ${ODA.name} hand receipt. PHRH remains ${ODA.phrhName}.`}
         meta={`${items.length} visible line${items.length === 1 ? "" : "s"} · holder ${card?.holderName ?? "unassigned"}`}
+        actions={
+          <Button asChild variant="outline">
+            <Link href={`/receipts/2062-in?section=${letter}`}>Import DA 2062 in</Link>
+          </Button>
+        }
       />
       <SectionSwitcher sections={workspace.sections} active={letter} />
       <PhrhChrome

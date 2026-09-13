@@ -1,27 +1,32 @@
+import Link from "next/link";
 import { FileArchive, UploadCloud } from "lucide-react";
-import { DisabledAction } from "@/components/ledger/disabled-action";
 import { PageHeader } from "@/components/ledger/page-header";
-import { NOT_WIRED } from "@/lib/ledger/copy";
 import { requirePm } from "@/lib/ledger/identity";
 import { getDocuments } from "@/lib/ledger/queries";
+import { Button } from "@/components/ui/button";
+import { loadWorkspace } from "@/lib/oda/workspace";
+import { CompanionBanner } from "@/components/ledger/companion-banner";
 
 export const dynamic = "force-dynamic";
 
 export default async function DocumentsPage() {
-  await requirePm();
+  const actor = await requirePm();
+  const workspace = await loadWorkspace(actor);
   const rows = getDocuments();
 
   return (
     <>
+      <CompanionBanner persistence={workspace.persistence} />
       <PageHeader
         title="Documents"
-        description="Source hand receipts and electronic Sub-hand receipts (SHR). Scanned DA Form 2062 attach is Sprint 2."
+        description="Source hand receipts, electronic Sub-hand receipts (SHR), and confirmed DA Form 2062 in PDFs."
         actions={
-          <DisabledAction
-            label="Import document"
-            reason={NOT_WIRED.importDocument}
-            icon={<UploadCloud />}
-          />
+          <Button asChild>
+            <Link href="/receipts/2062-in">
+              <UploadCloud />
+              Import DA 2062 in
+            </Link>
+          </Button>
         }
       />
       <div className="receipt-list">
@@ -41,6 +46,30 @@ export default async function DocumentsPage() {
             <div>
               <small>Notes</small>
               <b>{doc.notes}</b>
+            </div>
+          </article>
+        ))}
+        {workspace.da2062Imports.map((row) => (
+          <article className="panel" key={`da2062-${row.id}`}>
+            <span className="document-icon">
+              <FileArchive />
+            </span>
+            <div className="receipt-name">
+              <h3>
+                <Link href={`/receipts/2062-in/history/${row.id}`}>{row.filename}</Link>
+              </h3>
+              <p>DA Form 2062 in · {row.parsePath}</p>
+            </div>
+            <div>
+              <small>Date</small>
+              <b>{row.importedAt.slice(0, 10)}</b>
+            </div>
+            <div>
+              <small>Notes</small>
+              <b>
+                {row.lineCount} lines · {row.hasPdf ? "PDF attached" : "no PDF"} ·{" "}
+                {row.discrepancyCount} discrepancies
+              </b>
             </div>
           </article>
         ))}

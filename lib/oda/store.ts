@@ -4,6 +4,9 @@ import { getDb } from "@/db";
 import {
   accountabilityLines,
   componentFacts,
+  custodyInEvents,
+  da2062ImportLines,
+  da2062Imports,
   odaSections,
   odaUnits,
   packingFacts,
@@ -31,6 +34,7 @@ import { diffElectronicShr, injectCounts } from "./inject";
 import { ODA } from "./org";
 import { stencilDataUri } from "./picture-book";
 import { ODA_SCHEMA_SQL } from "./schema-sql";
+import { destinationLabel, enrichDa2062Lines, previewDa2062Conflicts, type Da2062InDraft } from "./da2062";
 import { INJECT_LABEL, SECTION_LETTERS, SECTION_META, type ElectronicShrLine, type SectionLetter } from "./types";
 
 export type PersistenceMode = "d1" | "unavailable";
@@ -71,6 +75,54 @@ export type InjectLineRecord = {
   priorQuantity: number | null;
   priorSerial: string | null;
   sectionLetter: string | null;
+};
+
+export type Da2062ImportRecord = {
+  id: number;
+  publicKey: string;
+  parsePath: string;
+  destinationKind: string;
+  destinationSection: SectionLetter | null;
+  issuer: string;
+  gainingParty: string;
+  gainingSection: SectionLetter | null;
+  uic: string;
+  filename: string;
+  importedAt: string;
+  importedBy: string;
+  priorImportId: number | null;
+  lineCount: number;
+  discrepancyCount: number;
+  notes: string | null;
+  hasPdf: boolean;
+};
+
+export type Da2062ImportLineRecord = {
+  lin: string | null;
+  nsn: string | null;
+  serial: string | null;
+  nomenclature: string;
+  quantity: number;
+  officialName: string | null;
+  actualName: string | null;
+  photoData: string | null;
+  sectionLetter: string | null;
+  lineKey: string | null;
+  confidence: string;
+};
+
+export type CustodyInRecord = {
+  nsn: string | null;
+  serial: string | null;
+  nomenclature: string;
+  quantity: number;
+  destinationKind: string;
+  destinationSection: string | null;
+  gainingParty: string;
+  issuer: string;
+  occurredAt: string;
+  recordedBy: string;
+  factLayer: string;
 };
 
 export type DiscrepancyRecord = {
@@ -616,6 +668,197 @@ export async function listDiscrepancies(): Promise<DiscrepancyRecord[]> {
     createdAt: row.createdAt,
     createdBy: row.createdBy,
   }));
+}
+
+export async function listDa2062Imports(): Promise<Da2062ImportRecord[]> {
+  if ((await ensureOdaStore()) !== "d1") return [];
+  const db = getDb();
+  const rows = await db.select().from(da2062Imports).orderBy(desc(da2062Imports.id));
+  return rows.map(toDa2062ImportRecord);
+}
+
+export async function getDa2062Import(id: number): Promise<{
+  record: Da2062ImportRecord;
+  lines: Da2062ImportLineRecord[];
+  events: CustodyInRecord[];
+  sourcePdfData: string | null;
+  sourcePdfContentType: string | null;
+} | null> {
+  if ((await ensureOdaStore()) !== "d1") return null;
+  const db = getDb();
+  const [row] = await db.select().from(da2062Imports).where(eq(da2062Imports.id, id)).limit(1);
+  if (!row) return null;
+  const lines = await db.select().from(da2062ImportLines).where(eq(da2062ImportLines.importId, id));
+  const events = await db.select().from(custodyInEvents).where(eq(custodyInEvents.importId, id));
+  return {
+    record: toDa2062ImportRecord(row),
+    lines: lines.map((line) => ({
+      lin: line.lin,
+      nsn: line.nsn,
+      serial: line.serialNumber,
+      nomenclature: line.nomenclature,
+      quantity: line.quantity,
+      officialName: line.officialName,
+      actualName: line.actualName,
+      photoData: line.photoData,
+      sectionLetter: line.sectionLetter,
+      lineKey: line.lineKey,
+      confidence: line.confidence,
+    })),
+    events: events.map((event) => ({
+      nsn: event.nsn,
+      serial: event.serialNumber,
+      nomenclature: event.nomenclature,
+      quantity: event.quantity,
+      destinationKind: event.destinationKind,
+      destinationSection: event.destinationSection,
+      gainingParty: event.gainingParty,
+      issuer: event.issuer,
+      occurredAt: event.occurredAt,
+      recordedBy: event.recordedBy,
+      factLayer: event.factLayer,
+    })),
+    sourcePdfData: row.sourcePdfData,
+    sourcePdfContentType: row.sourcePdfContentType,
+  };
+}
+
+export async function writeDa2062In(input: {
+  draft: Da2062InDraft;
+  actorName: string;
+}): Promise<{ importId: number; discrepancyKeys: string[] }> {
+  if ((await ensureOdaStore()) !== "d1") {
+    throw new Error("D1 is unavailable. DA Form 2062 in was not written.");
+  }
+  const db = getDb();
+  const [unit] = await db.select().from(odaUnits).limit(1);
+  const now = new Date().toISOString();
+  const prior = await db
+    .select()
+    .from(da2062Imports)
+    .where(
+      input.draft.destinationKind === "oda_hr"
+        ? eq(da2062Imports.destinationKind, "oda_hr")
+        : eq(da2062Imports.destinationSection, input.draft.destinationSection ?? ""),
+    )
+    .orderBy(desc(da2062Imports.id))
+    .limit(1);
+  const pictures = await listPictureBooks();
+  const enriched = enrichDa2062Lines(input.draft.lines, pictures);
+  const conflicts = previewDa2062Conflicts(input.draft);
+  const publicKey = `da2062-in-${input.draft.destinationKind}-${input.draft.destinationSection ?? "oda"}-${now}`;
+  const [record] = await db
+    .insert(da2062Imports)
+    .values({
+      unitId: unit.id,
+      publicKey,
+      direction: "in",
+      status: "committed",
+      parsePath: input.draft.parsePath,
+      destinationKind: input.draft.destinationKind,
+      destinationSection: input.draft.destinationSection,
+      issuer: input.draft.issuer,
+      gainingParty: input.draft.gainingParty,
+      gainingSection: input.draft.gainingSection,
+      uic: input.draft.uic,
+      filename: input.draft.filename,
+      sourcePdfData: input.draft.sourcePdfBase64
+        ? `data:${input.draft.sourcePdfContentType};base64,${input.draft.sourcePdfBase64}`
+        : null,
+      sourcePdfContentType: input.draft.sourcePdfContentType,
+      importedAt: now,
+      importedBy: input.actorName,
+      priorImportId: prior[0]?.id ?? null,
+      lineCount: enriched.length,
+      discrepancyCount: conflicts.length,
+      notes: `DA Form 2062 in · ${input.draft.parsePath} extract. Responsibility / custody-in only. Does not invent APSR accountability. ${destinationLabel(input.draft.destinationKind, input.draft.destinationSection)}.`,
+    })
+    .returning();
+
+  for (const line of enriched) {
+    await db.insert(da2062ImportLines).values({
+      importId: record.id,
+      lin: line.lin,
+      nsn: line.nsn,
+      serialNumber: line.serial,
+      nomenclature: line.nomenclature,
+      quantity: line.quantity,
+      officialName: line.officialName,
+      actualName: line.actualName,
+      photoData: line.photoData,
+      sectionLetter: input.draft.destinationSection,
+      lineKey: line.knownLineKey,
+      confidence: line.confidence,
+    });
+    await db.insert(custodyInEvents).values({
+      importId: record.id,
+      lineKey: line.knownLineKey,
+      nsn: line.nsn,
+      serialNumber: line.serial,
+      nomenclature: line.nomenclature,
+      quantity: line.quantity,
+      destinationKind: input.draft.destinationKind,
+      destinationSection: input.draft.destinationSection,
+      gainingParty: input.draft.gainingParty,
+      issuer: input.draft.issuer,
+      occurredAt: now,
+      recordedBy: input.actorName,
+      factLayer: "responsibility",
+    });
+  }
+
+  const discrepancyKeys: string[] = [];
+  for (const conflict of conflicts) {
+    const key = `da2062-${conflict.identityKey}-${conflict.sourceA}-${conflict.sourceB}-${now}`;
+    await db.insert(sourceDiscrepancies).values({
+      publicKey: key,
+      unitId: unit.id,
+      identityKey: conflict.identityKey,
+      nsn: conflict.nsn,
+      serialNumber: conflict.serial,
+      lin: conflict.lin,
+      sectionLetter: conflict.sectionLetter,
+      sourceA: conflict.sourceA,
+      sourceB: conflict.sourceB,
+      factA: conflict.factA,
+      factB: conflict.factB,
+      issue: conflict.issue,
+      action: conflict.action,
+      severity: conflict.severity,
+      status: "open",
+      itemKey:
+        ACCOUNTABILITY_LINES.find((line) => identityKey(line) === conflict.identityKey)?.key ??
+        enriched.find((line) => identityKey(line) === conflict.identityKey)?.knownLineKey ??
+        null,
+      createdAt: now,
+      createdBy: input.actorName,
+    });
+    discrepancyKeys.push(key);
+  }
+
+  return { importId: record.id, discrepancyKeys };
+}
+
+function toDa2062ImportRecord(row: typeof da2062Imports.$inferSelect): Da2062ImportRecord {
+  return {
+    id: row.id,
+    publicKey: row.publicKey,
+    parsePath: row.parsePath,
+    destinationKind: row.destinationKind,
+    destinationSection: (row.destinationSection as SectionLetter | null) ?? null,
+    issuer: row.issuer,
+    gainingParty: row.gainingParty,
+    gainingSection: (row.gainingSection as SectionLetter | null) ?? null,
+    uic: row.uic,
+    filename: row.filename,
+    importedAt: row.importedAt,
+    importedBy: row.importedBy,
+    priorImportId: row.priorImportId,
+    lineCount: row.lineCount,
+    discrepancyCount: row.discrepancyCount,
+    notes: row.notes,
+    hasPdf: Boolean(row.sourcePdfData),
+  };
 }
 
 export { personById };

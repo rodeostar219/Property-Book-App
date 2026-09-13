@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ArrowDownToLine, CalendarClock, Download, FileArchive, ArrowRightLeft, UploadCloud } from "lucide-react";
 import { DisabledAction } from "@/components/ledger/disabled-action";
 import { Metric } from "@/components/ledger/metric";
@@ -5,6 +6,7 @@ import { PageHeader } from "@/components/ledger/page-header";
 import { DA_2062_SUBTITLE, DA_2062_TITLE, NOT_WIRED, RENEWAL_PLACEHOLDER_NOTE } from "@/lib/ledger/copy";
 import { requirePm } from "@/lib/ledger/identity";
 import { getLoans } from "@/lib/ledger/queries";
+import { Button } from "@/components/ui/button";
 
 export const dynamic = "force-dynamic";
 
@@ -23,15 +25,15 @@ export default async function LoansPage() {
         meta={RENEWAL_PLACEHOLDER_NOTE}
         actions={
           <div className="split-actions">
-            <DisabledAction
-              label="Incoming 2062"
-              reason={NOT_WIRED.importDocument}
-              icon={<ArrowDownToLine />}
-              variant="outline"
-            />
+            <Button asChild variant="outline">
+              <Link href="/receipts/2062-in">
+                <ArrowDownToLine />
+                Incoming 2062
+              </Link>
+            </Button>
             <DisabledAction
               label="Outgoing 2062"
-              reason={NOT_WIRED.importDocument}
+              reason={NOT_WIRED.da2062Out}
               icon={<UploadCloud />}
             />
           </div>
