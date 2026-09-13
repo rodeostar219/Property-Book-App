@@ -1,0 +1,28 @@
+name: Publish wiki
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "wiki/**"
+      - "docs/**"
+      - "scripts/publish-wiki.sh"
+      - ".github/workflows/publish-wiki.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Push wiki pages
+        continue-on-error: true
+        env:
+          GIT_TERMINAL_PROMPT: "0"
+        run: |
+          chmod +x scripts/publish-wiki.sh
+          scripts/publish-wiki.sh
