@@ -1,11 +1,16 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  ADD_TO_SIGNED_FOR_LABEL,
   CONFIRM_BEFORE_WRITE,
   DA2062_IN_DOES_NOT_INVENT_APSR,
+  DA2062_SUCCESS_IS_NOT_ACCEPT,
   blankSerialToNull,
+  defaultDispositionForLine,
   enrichDa2062Lines,
+  gainingPartyLabel,
   parseDa2062Pdf,
+  planDa2062Confirm,
   previewDa2062Conflicts,
   validateDa2062InDestination,
 } from "./da2062";
@@ -23,6 +28,8 @@ describe("DA Form 2062 in", () => {
   it("requires a confirm screen before any write, even on a perfect parse", () => {
     assert.equal(CONFIRM_BEFORE_WRITE, true);
     assert.equal(DA2062_IN_DOES_NOT_INVENT_APSR, true);
+    assert.equal(DA2062_SUCCESS_IS_NOT_ACCEPT, true);
+    assert.equal(ADD_TO_SIGNED_FOR_LABEL, "Add to signed-for");
   });
 
   it("treats blank / em-dash serials as null and displays not recorded", () => {
@@ -180,6 +187,48 @@ describe("DA Form 2062 in", () => {
     const radio = enriched.find((line) => line.serial === "15800421");
     assert.equal(radio?.knownLineKey, null);
     assert.equal(radio?.actualName, null);
+  });
+
+  it("plans accept / skip / flag without writing skipped lines", () => {
+    const parsed = parseDa2062Pdf(
+      da2062Fixture("electronic-echo").bytes,
+      "electronic.pdf",
+      { kind: "section_shr", section: "E" },
+    );
+    assert.equal(parsed.ok, true);
+    if (!parsed.ok) return;
+    const conflicts = previewDa2062Conflicts(parsed.draft);
+    const defaults = parsed.draft.lines.map((line) => defaultDispositionForLine(line, conflicts));
+    assert.ok(defaults.includes("flag"));
+    const allSkip = planDa2062Confirm({
+      lines: parsed.draft.lines,
+      dispositions: parsed.draft.lines.map(() => "skip"),
+      conflicts,
+      sectionLetter: "E",
+    });
+    assert.equal(allSkip.willWrite, false);
+    assert.equal(allSkip.accepted.length, 0);
+
+    const mixed = planDa2062Confirm({
+      lines: parsed.draft.lines,
+      dispositions: ["accept", "skip", "flag", "accept"],
+      conflicts,
+      sectionLetter: "E",
+    });
+    assert.equal(mixed.accepted.length, 2);
+    assert.equal(mixed.skipped.length, 1);
+    assert.equal(mixed.flagged.length, 1);
+    assert.equal(mixed.willWrite, true);
+    assert.ok(mixed.flaggedDiscrepancies.length + mixed.conflictDiscrepancies.length >= 1);
+    assert.equal(
+      gainingPartyLabel({
+        destinationKind: "section_shr",
+        destinationSection: "E",
+        gainingParty: "SSG Ryan Cole",
+        gainingSection: "E",
+      }),
+      "Echo (E) · SSG Ryan Cole",
+    );
   });
 
   it("extracts AcroForm fields from the electronic fixture PDF", () => {

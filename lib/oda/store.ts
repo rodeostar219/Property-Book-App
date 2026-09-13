@@ -34,8 +34,21 @@ import { diffElectronicShr, injectCounts } from "./inject";
 import { ODA } from "./org";
 import { stencilDataUri } from "./picture-book";
 import { ODA_SCHEMA_SQL } from "./schema-sql";
-import { destinationLabel, enrichDa2062Lines, previewDa2062Conflicts, type Da2062InDraft } from "./da2062";
-import { INJECT_LABEL, SECTION_LETTERS, SECTION_META, type ElectronicShrLine, type SectionLetter } from "./types";
+import {
+  destinationLabel,
+  enrichDa2062Lines,
+  planDa2062Confirm,
+  previewDa2062Conflicts,
+  type Da2062InDraft,
+} from "./da2062";
+import {
+  INJECT_LABEL,
+  SECTION_LETTERS,
+  SECTION_META,
+  type ElectronicShrLine,
+  type LineDisposition,
+  type SectionLetter,
+} from "./types";
 
 export type PersistenceMode = "d1" | "unavailable";
 
@@ -109,6 +122,7 @@ export type Da2062ImportLineRecord = {
   sectionLetter: string | null;
   lineKey: string | null;
   confidence: string;
+  disposition: LineDisposition;
 };
 
 export type CustodyInRecord = {
@@ -163,6 +177,15 @@ export async function ensureOdaStore(): Promise<PersistenceMode> {
     const statements = ODA_SCHEMA_SQL.split(";").map((part) => part.trim()).filter(Boolean);
     for (const statement of statements) {
       await binding.prepare(statement).run();
+    }
+    try {
+      await binding
+        .prepare(
+          "ALTER TABLE da2062_import_lines ADD COLUMN disposition text DEFAULT 'accept' NOT NULL",
+        )
+        .run();
+    } catch {
+      // Column already exists on stores created after Slice 1 confirm UX.
     }
     const db = getDb();
     const existing = await db.select().from(odaUnits).limit(1);
@@ -704,6 +727,7 @@ export async function getDa2062Import(id: number): Promise<{
       sectionLetter: line.sectionLetter,
       lineKey: line.lineKey,
       confidence: line.confidence,
+      disposition: (line.disposition as LineDisposition | null) ?? "accept",
     })),
     events: events.map((event) => ({
       nsn: event.nsn,
@@ -725,11 +749,29 @@ export async function getDa2062Import(id: number): Promise<{
 
 export async function writeDa2062In(input: {
   draft: Da2062InDraft;
+  dispositions: LineDisposition[];
   actorName: string;
-}): Promise<{ importId: number; discrepancyKeys: string[] }> {
+}): Promise<{
+  importId: number;
+  discrepancyKeys: string[];
+  acceptedCount: number;
+  flaggedCount: number;
+  skippedCount: number;
+}> {
   if ((await ensureOdaStore()) !== "d1") {
     throw new Error("D1 is unavailable. DA Form 2062 in was not written.");
   }
+  const conflicts = previewDa2062Conflicts(input.draft);
+  const plan = planDa2062Confirm({
+    lines: input.draft.lines,
+    dispositions: input.dispositions,
+    conflicts,
+    sectionLetter: input.draft.destinationSection,
+  });
+  if (!plan.willWrite) {
+    throw new Error("Cancel / all skipped. No rows written.");
+  }
+
   const db = getDb();
   const [unit] = await db.select().from(odaUnits).limit(1);
   const now = new Date().toISOString();
@@ -745,7 +787,7 @@ export async function writeDa2062In(input: {
     .limit(1);
   const pictures = await listPictureBooks();
   const enriched = enrichDa2062Lines(input.draft.lines, pictures);
-  const conflicts = previewDa2062Conflicts(input.draft);
+  const discrepancies = [...plan.conflictDiscrepancies, ...plan.flaggedDiscrepancies];
   const publicKey = `da2062-in-${input.draft.destinationKind}-${input.draft.destinationSection ?? "oda"}-${now}`;
   const [record] = await db
     .insert(da2062Imports)
@@ -769,13 +811,14 @@ export async function writeDa2062In(input: {
       importedAt: now,
       importedBy: input.actorName,
       priorImportId: prior[0]?.id ?? null,
-      lineCount: enriched.length,
-      discrepancyCount: conflicts.length,
-      notes: `DA Form 2062 in · ${input.draft.parsePath} extract. Responsibility / custody-in only. Does not invent APSR accountability. ${destinationLabel(input.draft.destinationKind, input.draft.destinationSection)}.`,
+      lineCount: plan.accepted.length,
+      discrepancyCount: discrepancies.length,
+      notes: `Added ${plan.accepted.length} line${plan.accepted.length === 1 ? "" : "s"} to signed-for on ${destinationLabel(input.draft.destinationKind, input.draft.destinationSection)}. History written. Not Accept theater. Does not invent APSR accountability. ${plan.skipped.length} skipped · ${plan.flagged.length} flagged.`,
     })
     .returning();
 
-  for (const line of enriched) {
+  for (const [index, line] of enriched.entries()) {
+    const disposition = input.dispositions[index] ?? "accept";
     await db.insert(da2062ImportLines).values({
       importId: record.id,
       lin: line.lin,
@@ -789,26 +832,29 @@ export async function writeDa2062In(input: {
       sectionLetter: input.draft.destinationSection,
       lineKey: line.knownLineKey,
       confidence: line.confidence,
+      disposition,
     });
-    await db.insert(custodyInEvents).values({
-      importId: record.id,
-      lineKey: line.knownLineKey,
-      nsn: line.nsn,
-      serialNumber: line.serial,
-      nomenclature: line.nomenclature,
-      quantity: line.quantity,
-      destinationKind: input.draft.destinationKind,
-      destinationSection: input.draft.destinationSection,
-      gainingParty: input.draft.gainingParty,
-      issuer: input.draft.issuer,
-      occurredAt: now,
-      recordedBy: input.actorName,
-      factLayer: "responsibility",
-    });
+    if (disposition === "accept") {
+      await db.insert(custodyInEvents).values({
+        importId: record.id,
+        lineKey: line.knownLineKey,
+        nsn: line.nsn,
+        serialNumber: line.serial,
+        nomenclature: line.nomenclature,
+        quantity: line.quantity,
+        destinationKind: input.draft.destinationKind,
+        destinationSection: input.draft.destinationSection,
+        gainingParty: input.draft.gainingParty,
+        issuer: input.draft.issuer,
+        occurredAt: now,
+        recordedBy: input.actorName,
+        factLayer: "responsibility",
+      });
+    }
   }
 
   const discrepancyKeys: string[] = [];
-  for (const conflict of conflicts) {
+  for (const conflict of discrepancies) {
     const key = `da2062-${conflict.identityKey}-${conflict.sourceA}-${conflict.sourceB}-${now}`;
     await db.insert(sourceDiscrepancies).values({
       publicKey: key,
@@ -817,7 +863,7 @@ export async function writeDa2062In(input: {
       nsn: conflict.nsn,
       serialNumber: conflict.serial,
       lin: conflict.lin,
-      sectionLetter: conflict.sectionLetter,
+      sectionLetter: conflict.sectionLetter ?? input.draft.destinationSection,
       sourceA: conflict.sourceA,
       sourceB: conflict.sourceB,
       factA: conflict.factA,
@@ -836,7 +882,22 @@ export async function writeDa2062In(input: {
     discrepancyKeys.push(key);
   }
 
-  return { importId: record.id, discrepancyKeys };
+  const written = await getDa2062Import(record.id);
+  if (
+    !written ||
+    written.events.length !== plan.accepted.length ||
+    written.record.lineCount !== plan.accepted.length
+  ) {
+    throw new Error("D1 write did not assert history. No success is claimed.");
+  }
+
+  return {
+    importId: record.id,
+    discrepancyKeys,
+    acceptedCount: plan.accepted.length,
+    flaggedCount: plan.flagged.length,
+    skippedCount: plan.skipped.length,
+  };
 }
 
 function toDa2062ImportRecord(row: typeof da2062Imports.$inferSelect): Da2062ImportRecord {
