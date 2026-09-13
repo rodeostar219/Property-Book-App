@@ -2,7 +2,6 @@ import { CompanionBanner } from "@/components/ledger/companion-banner";
 import { PmHome } from "@/components/ledger/home-pm";
 import { SoldierHome } from "@/components/ledger/home-soldier";
 import { getActor } from "@/lib/ledger/identity";
-import { getLoans } from "@/lib/ledger/queries";
 import { loadWorkspace } from "@/lib/oda/workspace";
 
 export const dynamic = "force-dynamic";
@@ -17,10 +16,9 @@ export default async function HomePage() {
         <CompanionBanner persistence={workspace.persistence} />
         <PmHome
           actor={actor}
-          itemCount={workspace.items.length}
+          signedFor={workspace.items.filter((item) => item.assignedToId === actor.id)}
           exceptionCount={workspace.exceptions.length}
           exceptions={workspace.exceptions}
-          renewSoon={getLoans().filter((loan) => loan.status === "Renew soon")}
           sections={workspace.sections}
         />
       </>

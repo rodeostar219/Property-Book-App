@@ -31,7 +31,7 @@ export const NOT_WIRED = {
   resolve:
     "Resolve is not persisted yet. A required audit note before close stays out of Sprint 1.",
   accept:
-    "Accept / inventory ceremony is out of Sprint 1. Use Inject changes for an electronic Sub-hand receipt (SHR) update.",
+    "Accept / inventory ceremony is out of Sprint 1. Use Sub-hand receipt update for an electronic 18E extract.",
   custody: "Custody changes are not persisted in Sprint 1.",
   location: "Location changes are not persisted in Sprint 1.",
   export: "Export is not wired — no file is generated.",

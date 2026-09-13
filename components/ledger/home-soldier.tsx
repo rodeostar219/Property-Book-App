@@ -3,8 +3,8 @@ import { AlertTriangle, Package } from "lucide-react";
 import { Metric } from "@/components/ledger/metric";
 import { PageHeader } from "@/components/ledger/page-header";
 import { SectionSwitcher } from "@/components/ledger/section-switcher";
-import { StatusChip } from "@/components/ledger/status-chip";
-import { formatSerial, UNIT } from "@/lib/ledger/copy";
+import { SignedForList } from "@/components/ledger/signed-for-list";
+import { UNIT } from "@/lib/ledger/copy";
 import type { Actor, LedgerException, PropertyItem } from "@/lib/ledger/types";
 import type { SectionCard } from "@/lib/oda/workspace";
 
@@ -44,28 +44,10 @@ export function SoldierHome({
         />
       </div>
       <div className="dashboard-grid">
-        <section className="panel">
-          <div className="panel-head">
-            <div>
-              <h2>My signed-for</h2>
-              <p>Section Sub-hand receipt (SHR) lines — tap a line for official / actual name and photo.</p>
-            </div>
-            <Link href="/my-property">Open my section</Link>
-          </div>
-          <ul className="home-item-list">
-            {items.map((item) => (
-              <li key={item.id}>
-                <Link href={`/lines/${item.id}`}>
-                  <b>{item.commonName ?? item.name}</b>
-                  <span>
-                    {item.officialName ?? item.name} · {formatSerial(item.serial)}
-                  </span>
-                </Link>
-                <StatusChip item={item} />
-              </li>
-            ))}
-          </ul>
-        </section>
+        <SignedForList
+          items={items}
+          empty="No signed-for lines on this section Sub-hand receipt (SHR)."
+        />
         <section className="panel activity">
           <div className="panel-head">
             <div>

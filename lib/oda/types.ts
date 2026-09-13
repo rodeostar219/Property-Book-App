@@ -77,4 +77,4 @@ export const SECTION_META: Record<
 };
 
 export const INJECT_LABEL = "Sub-hand receipt update";
-export const INJECT_ACTION_LABEL = "Inject changes";
+export const INJECT_ACTION_LABEL = "Sub-hand receipt update";

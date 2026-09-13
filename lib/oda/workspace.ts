@@ -31,6 +31,7 @@ import type { Actor, LedgerException, PropertyItem } from "@/lib/ledger/types";
 
 export type SectionCard = {
   letter: SectionLetter;
+  name: string;
   title: string;
   mos: string;
   specialty: string;
@@ -143,6 +144,7 @@ export async function loadWorkspace(actor: Actor): Promise<Workspace> {
     const holder = Object.values(PEOPLE).find((person) => person.sectionLetter === letter);
     return {
       letter,
+      name: SECTION_META[letter].name,
       title: sectionTitle(letter),
       mos: SECTION_META[letter].mos,
       specialty: SECTION_META[letter].specialty,

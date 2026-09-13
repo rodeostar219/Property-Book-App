@@ -45,9 +45,9 @@ export function InjectPanel({
         <div>
           <h2>{INJECT_FEED_LABEL}</h2>
           <p>
-            Electronic Sub-hand receipt (SHR) from APSR / 18E-style extract. This is{" "}
-            <b>{INJECT_BUTTON_LABEL}</b> — not Accept theater. Prior snapshots stay queryable.
-            Scanned DA Form 2062 is out of Sprint 1.
+            Electronic 18E Sub-hand receipt (SHR). Diff writes versioned history; mismatches
+            open a discrepancy. Not Accept theater. Prior snapshots stay queryable. Scanned DA
+            Form 2062 is out of Sprint 1.
           </p>
         </div>
       </div>

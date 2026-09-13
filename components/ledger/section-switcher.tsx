@@ -17,9 +17,14 @@ export function SectionSwitcher({
           const selected = active === section.letter;
           if (!section.visible) {
             return (
-              <span key={section.letter} className="section-chip locked" title="Section isolation">
+              <span
+                key={section.letter}
+                className="section-chip locked"
+                title={`${section.title} is isolated from this identity`}
+              >
                 <Lock />
                 {section.letter}
+                <em>{section.name}</em>
               </span>
             );
           }
@@ -30,7 +35,7 @@ export function SectionSwitcher({
               className={`section-chip ${selected ? "selected" : ""}`}
             >
               {section.letter}
-              <em>{section.specialty}</em>
+              <em>{section.name}</em>
             </Link>
           );
         })}
