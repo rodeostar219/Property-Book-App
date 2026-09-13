@@ -12,3 +12,5 @@ Do **not** flatten into one `property_item`.
 **Conflict rule:** if sources disagree → open a discrepancy; never silent-merge.
 
 **Doc types:** DA Form 2062 (responsibility) ≠ DD Form 1750 (packing).
+
+**See also:** [TERMINOLOGY.md](./TERMINOLOGY.md) — Army vs local vs improve, Soldier-facing labels, companion to GCSS.
