@@ -13,12 +13,7 @@ import {
   type ActionResult,
   type ParseDa2062Result,
 } from "@/lib/oda/actions";
-import {
-  defaultDispositionForLine,
-  destinationLabel,
-  gainingPartyLabel,
-  planDa2062Confirm,
-} from "@/lib/oda/da2062";
+import { destinationLabel, gainingPartyLabel, planDa2062Confirm } from "@/lib/oda/da2062";
 import { identityKey } from "@/lib/oda/identity-key";
 import type { Da2062FixtureName } from "@/lib/oda/da2062-fixtures";
 import type { PersistenceMode } from "@/lib/oda/store";
@@ -69,9 +64,7 @@ export function Da2062InPanel({ actor, persistence, defaultKind, defaultSection 
       const next = await parseDa2062In(data);
       setParse(next);
       if (next.ok) {
-        setDispositions(
-          next.enriched.map((line) => defaultDispositionForLine(line, next.conflicts)),
-        );
+        setDispositions(next.defaultDispositions);
       } else {
         setDispositions([]);
       }
@@ -93,8 +86,10 @@ export function Da2062InPanel({ actor, persistence, defaultKind, defaultSection 
 
   function onConfirm() {
     if (!parse || !parse.ok) return;
+    const resolved =
+      dispositions.length === parse.enriched.length ? dispositions : parse.defaultDispositions;
     startTransition(async () => {
-      const next = await confirmDa2062In(JSON.stringify(parse.draft), JSON.stringify(dispositions));
+      const next = await confirmDa2062In(JSON.stringify(parse.draft), JSON.stringify(resolved));
       setCommit(next);
       if (next.ok && next.importId) {
         const dest = parse.draft.destinationSection;
@@ -251,9 +246,11 @@ function Da2062Confirm({
   onCancel: () => void;
   commit: ActionResult | null;
 }) {
+  const resolved =
+    dispositions.length === parse.enriched.length ? dispositions : parse.defaultDispositions;
   const plan = planDa2062Confirm({
     lines: parse.draft.lines,
-    dispositions,
+    dispositions: resolved,
     conflicts: parse.conflicts,
     sectionLetter: parse.draft.destinationSection,
   });
@@ -340,12 +337,12 @@ function Da2062Confirm({
                       {(["accept", "skip", "flag"] as const).map((option) => (
                         <label
                           key={option}
-                          className={dispositions[index] === option ? "selected" : ""}
+                          className={`${option}${resolved[index] === option ? " selected" : ""}`}
                         >
                           <input
                             type="radio"
                             name={`line-disposition-${index}`}
-                            checked={dispositions[index] === option}
+                            checked={resolved[index] === option}
                             onChange={() => onDisposition(index, option)}
                           />
                           {option === "accept"
