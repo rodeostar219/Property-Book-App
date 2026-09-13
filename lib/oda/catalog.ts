@@ -480,7 +480,7 @@ export const PACKING_LINES: CatalogPackingLine[] = [
     serial: "10087231",
     nomenclature: "Radio Set, AN/PRC-163",
     quantity: 2,
-    documentLabel: "DA Form 1750 · team box (present, not a loadout package)",
+    documentLabel: "DD Form 1750 · team box (present, not a loadout package)",
     sectionLetter: "E",
   },
 ];
@@ -524,7 +524,7 @@ export const SEED_CONFLICTS: SourceConflict[] = [
     sourceB: "packing_1750",
     factA: "Radio Set, AN/PRC-163 · qty 1 SN 10087231",
     factB: "Radio Set, AN/PRC-163 · qty 2 SN 10087231",
-    issue: "Hand receipt quantity 1 disagrees with DA Form 1750 quantity 2",
+    issue: "Hand receipt quantity 1 disagrees with DD Form 1750 quantity 2",
     action: "Open a discrepancy. Packing is not accountability.",
     severity: "Shortage",
   },

@@ -87,7 +87,7 @@ function applyPicture(item: PropertyItem, pictures: PictureBookRow[]): LayeredLi
           : item.components.map((line) => `${line.kind} ${line.nomenclature}`).join(" · "),
       packing: packing
         ? `${packing.documentLabel} · qty ${packing.quantity}`
-        : "No DA Form 1750 fact on this line",
+        : "No DD Form 1750 fact on this line",
       custody: item.assignedToName
         ? `Signed for by ${item.assignedToName} · ${item.location}`
         : `On hand · ${item.location}`,

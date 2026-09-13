@@ -91,7 +91,7 @@ export function sourceLabel(source: FactSource): string {
     case "picture_book":
       return "Picture book (visual ID)";
     case "packing_1750":
-      return "DA Form 1750";
+      return "DD Form 1750";
     default:
       return source;
   }

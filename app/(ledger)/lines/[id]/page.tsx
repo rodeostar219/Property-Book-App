@@ -107,7 +107,7 @@ export default async function LinePage({
           <div className="panel-head">
             <div>
               <h2>Other sources</h2>
-              <p>Tracker and 1750 stay beside the hand receipt — never flattened</p>
+              <p>Tracker and DD Form 1750 stay beside the hand receipt — never flattened</p>
             </div>
           </div>
           <dl className="detail-list">
@@ -128,7 +128,7 @@ export default async function LinePage({
               <dd>{item.trackerNote ?? "no tracker fact"}</dd>
             </div>
             <div>
-              <dt>DA Form 1750</dt>
+              <dt>DD Form 1750</dt>
               <dd>{item.packingNote ?? "none present"}</dd>
             </div>
           </dl>
