@@ -3,19 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useTransition } from "react";
-import {
-  CheckCircle2,
-  ChevronDown,
-  ClipboardCheck,
-  Download,
-  Menu,
-} from "lucide-react";
+import { CheckCircle2, ChevronDown, ClipboardCheck, Download, Menu } from "lucide-react";
 import { DisabledAction } from "@/components/ledger/disabled-action";
 import { Progress } from "@/components/ui/progress";
 import { NOT_WIRED, UNIT } from "@/lib/ledger/copy";
-import { setDemoRole } from "@/lib/ledger/demo-role";
+import { setDemoIdentity } from "@/lib/ledger/demo-role";
 import { navForRole, pageTitleForPath } from "@/lib/ledger/nav";
-import type { Actor, AppRole } from "@/lib/ledger/types";
+import type { Actor, DemoIdentity } from "@/lib/ledger/types";
 
 type Props = {
   actor: Actor;
@@ -39,10 +33,16 @@ export function AppShell({
   const [pending, startTransition] = useTransition();
   const nav = navForRole(actor.role);
   const title = pageTitleForPath(pathname);
+  const roleLabel =
+    actor.identity === "pm"
+      ? "ODA / PM"
+      : actor.sectionLetter === "B"
+        ? "Bravo SHR"
+        : "Echo 18E";
 
-  function switchRole(role: AppRole) {
+  function switchIdentity(identity: DemoIdentity) {
     startTransition(() => {
-      void setDemoRole(role);
+      void setDemoIdentity(identity);
     });
   }
 
@@ -54,9 +54,9 @@ export function AppShell({
             <ClipboardCheck />
           </span>
           <div>
-            <b>PROPERTY LEDGER</b>
+            <b>ODA WORKSPACE</b>
             <small>
-              {UNIT.uic} · {UNIT.name.replace("SFODA-", "")}
+              {UNIT.uic} · {UNIT.name} · {UNIT.installation}
             </small>
           </div>
         </div>
@@ -84,45 +84,56 @@ export function AppShell({
           })}
         </nav>
         <div className="accountability">
-          <small>CURRENT HAND RECEIPT</small>
+          <small>ODA HAND RECEIPT</small>
           <strong>
             {UNIT.receiptLabel} · {UNIT.document}
           </strong>
           <p>
-            {UNIT.uic} · PHRH {actor.role === "pm" ? actor.fullName : "R. Ortiz"}
+            {UNIT.group} · PHRH {UNIT.name === "ODA-1223" ? "CPT A. Reyes" : "PHRH"}
           </p>
           <div>
-            <span>Reconciled</span>
-            <b>98.9%</b>
+            <span>Companion workspace</span>
+            <b>not SoR</b>
           </div>
-          <Progress value={98.9} />
+          <Progress value={100} />
         </div>
         <div className="user">
           <span>{actor.initials}</span>
           <div>
             <b>{actor.displayName}</b>
-            <small>{actor.role === "pm" ? "Property Manager" : "Soldier"}</small>
+            <small>
+              {actor.mos ? `${actor.mos} · ` : ""}
+              {roleLabel}
+            </small>
           </div>
           <ChevronDown />
         </div>
         <form className="role-switch">
           <small>Demo identity</small>
-          <div>
+          <div className="identity-switch">
             <button
               type="button"
-              disabled={pending || actor.role === "soldier"}
-              className={actor.role === "soldier" ? "selected" : ""}
-              onClick={() => switchRole("soldier")}
+              disabled={pending || actor.identity === "echo"}
+              className={actor.identity === "echo" ? "selected" : ""}
+              onClick={() => switchIdentity("echo")}
             >
-              Soldier
+              Echo
             </button>
             <button
               type="button"
-              disabled={pending || actor.role === "pm"}
-              className={actor.role === "pm" ? "selected" : ""}
-              onClick={() => switchRole("pm")}
+              disabled={pending || actor.identity === "bravo"}
+              className={actor.identity === "bravo" ? "selected" : ""}
+              onClick={() => switchIdentity("bravo")}
             >
-              PM
+              Bravo
+            </button>
+            <button
+              type="button"
+              disabled={pending || actor.identity === "pm"}
+              className={actor.identity === "pm" ? "selected" : ""}
+              onClick={() => switchIdentity("pm")}
+            >
+              ODA
             </button>
           </div>
           {signedIn ? (
@@ -146,7 +157,7 @@ export function AppShell({
             <Menu />
           </button>
           <div>
-            <p>PROPERTY ACCOUNTABILITY</p>
+            <p>1ST SFG (A) · JBLM · OPERATIONAL PROPERTY</p>
             <h1>{title}</h1>
           </div>
           <div className="header-actions">

@@ -1,19 +1,21 @@
-import { Check, FileSearch, Plus, UploadCloud, X } from "lucide-react";
+import Link from "next/link";
+import { FileSearch, UploadCloud } from "lucide-react";
+import { CompanionBanner } from "@/components/ledger/companion-banner";
 import { DisabledAction } from "@/components/ledger/disabled-action";
 import { CurrentBadge } from "@/components/ledger/app-shell";
+import { InjectPanel } from "@/components/ledger/inject-panel";
 import { PageHeader } from "@/components/ledger/page-header";
 import { PhrhChrome } from "@/components/ledger/phrh-note";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { NOT_WIRED } from "@/lib/ledger/copy";
+import { INJECT_FEED_LABEL, NOT_WIRED } from "@/lib/ledger/copy";
 import { requirePm } from "@/lib/ledger/identity";
-import { getReceiptPeriods, getReceipts } from "@/lib/ledger/queries";
+import { getReceipts } from "@/lib/ledger/queries";
+import { loadWorkspace } from "@/lib/oda/workspace";
 
 export const dynamic = "force-dynamic";
 
 export default async function ReceiptsPage() {
-  await requirePm();
-  const periods = getReceiptPeriods();
+  const actor = await requirePm();
+  const workspace = await loadWorkspace(actor);
   const rows = getReceipts().filter(
     (row) => row.kind === "hand_receipt" || row.kind === "sub_hand_receipt",
   );
@@ -22,12 +24,13 @@ export default async function ReceiptsPage() {
 
   return (
     <>
+      <CompanionBanner persistence={workspace.persistence} />
       <PageHeader
         title="Hand receipts"
-        description="Unit hand receipt snapshots and Sub-hand receipts (SHR). SHR is not a monthly product concept."
+        description="ODA hand receipt plus electronic Sub-hand receipt (SHR) inject history. Not a monthly product. Not Accept theater."
         actions={
           <DisabledAction
-            label="Import hand receipt"
+            label="Import scanned 2062"
             reason={NOT_WIRED.importDocument}
             icon={<UploadCloud />}
           />
@@ -37,148 +40,49 @@ export default async function ReceiptsPage() {
       {current ? <PhrhChrome source={current} /> : null}
       {shr ? <PhrhChrome source={shr} compact /> : null}
 
+      <InjectPanel sectionLetter="E" persistence={workspace.persistence} canEdit />
+
       <section className="panel month-compare">
         <div className="panel-head">
           <div>
-            <h2>Period-to-period reconciliation</h2>
-            <p>Serial, NSN, and LIN changes are never silently applied</p>
+            <h2>{INJECT_FEED_LABEL} history</h2>
+            <p>Prior electronic SHR snapshots remain queryable. Nothing is silently applied to other layers.</p>
           </div>
-          <CurrentBadge>September current</CurrentBadge>
+          <CurrentBadge>Versioned change feed</CurrentBadge>
         </div>
         <div className="month-grid">
-          {periods.map((period, index) => (
-            <article key={period.id}>
-              <div className="month-title">
-                <span>
-                  <FileSearch />
-                </span>
-                <div>
-                  <h3>{period.period}</h3>
-                  <p>Effective {period.effective}</p>
+          {workspace.injects.length === 0 ? (
+            <p className="table-empty">No inject snapshots yet.</p>
+          ) : (
+            workspace.injects.map((inject) => (
+              <article key={inject.id}>
+                <div className="month-title">
+                  <span>
+                    <FileSearch />
+                  </span>
+                  <div>
+                    <h3>{inject.label}</h3>
+                    <p>
+                      {inject.injectedBy} · {inject.injectedAt.slice(0, 10)}
+                      {inject.sectionLetter ? ` · section ${inject.sectionLetter}` : ""}
+                    </p>
+                  </div>
+                  <span className="pill green">Queryable</span>
                 </div>
-                <span className={`pill ${index === 0 ? "green" : "blue"}`}>
-                  {period.status}
-                </span>
-              </div>
-              <strong>{period.items}</strong>
-              <small>Hand-receipt items</small>
-              <div className="delta">
-                <span className="gain">+{period.added} added</span>
-                <span className="loss">−{period.removed} removed</span>
-                <span>{period.unchanged} unchanged</span>
-              </div>
-              {index === 0 ? (
-                <Button variant="outline" size="sm" asChild>
-                  <a href="#comparison">Review changes</a>
-                </Button>
-              ) : (
-                <DisabledAction
-                  label="Open snapshot"
-                  reason={NOT_WIRED.accept}
-                  variant="outline"
-                  size="sm"
-                />
-              )}
-            </article>
-          ))}
+                <strong>{inject.addedCount + inject.unchangedCount + inject.changedCount}</strong>
+                <small>Lines in this snapshot</small>
+                <div className="delta">
+                  <span className="gain">+{inject.addedCount} added</span>
+                  <span className="loss">−{inject.removedCount} removed</span>
+                  <span>{inject.changedCount} changed</span>
+                </div>
+                <Link className="snapshot-link" href={`/receipts/history/${inject.id}`}>
+                  Open snapshot
+                </Link>
+              </article>
+            ))
+          )}
         </div>
-      </section>
-
-      <section className="panel analysis-panel" id="comparison">
-        <div className="panel-head">
-          <div>
-            <h2>September comparison</h2>
-            <p>Read-only review. Accept is disabled until Slice D.</p>
-          </div>
-          <DisabledAction label="Accept as current" reason={NOT_WIRED.accept} />
-        </div>
-        <div className="analysis-metrics">
-          <div>
-            <strong>192</strong>
-            <span>September items</span>
-          </div>
-          <div>
-            <strong>190</strong>
-            <span>August items</span>
-          </div>
-          <div>
-            <strong>+4</strong>
-            <span>Added this period</span>
-          </div>
-          <div>
-            <strong>−2</strong>
-            <span>Dropped this period</span>
-          </div>
-        </div>
-        <Tabs defaultValue="changes">
-          <TabsList>
-            <TabsTrigger value="changes">Changes</TabsTrigger>
-            <TabsTrigger value="summary">New receipt summary</TabsTrigger>
-          </TabsList>
-          <TabsContent value="changes">
-            <div className="change-list">
-              <article>
-                <span className="change-icon green">
-                  <Plus />
-                </span>
-                <div>
-                  <b>4 items were added on the September hand receipt</b>
-                  <p>Review new serial, NSN, and LIN records before accepting.</p>
-                </div>
-                <span className="pill green">GAIN</span>
-              </article>
-              <article>
-                <span className="change-icon red">
-                  <X />
-                </span>
-                <div>
-                  <b>2 August items dropped from the new hand receipt</b>
-                  <p>Document the reason for each removal.</p>
-                </div>
-                <span className="pill red">REVIEW</span>
-              </article>
-              <article>
-                <span className="change-icon amber">
-                  <FileSearch />
-                </span>
-                <div>
-                  <b>1 new line has no serial recorded</b>
-                  <p>BHI Mini-SATCOM Antenna Kit · NSN 589501D050302</p>
-                </div>
-                <span className="pill amber">MISSING DATA</span>
-              </article>
-              <article>
-                <span className="change-icon green">
-                  <Check />
-                </span>
-                <div>
-                  <b>188 records are unchanged period to period</b>
-                  <p>Accepted identifiers and history stay in place.</p>
-                </div>
-                <span className="pill green">MATCHED</span>
-              </article>
-            </div>
-          </TabsContent>
-          <TabsContent value="summary">
-            <div className="receipt-summary">
-              <p>
-                <b>9</b> Dell E5420 workstations
-              </p>
-              <p>
-                <b>8</b> Dell Latitude 7430 laptops
-              </p>
-              <p>
-                <b>12</b> AN/PYQ-10 computer systems
-              </p>
-              <p>
-                <b>12</b> Nett Warrior systems
-              </p>
-              <p>
-                <b>4</b> AN/PRC-163 radio sets
-              </p>
-            </div>
-          </TabsContent>
-        </Tabs>
       </section>
 
       <h3 className="section-label">Source documents</h3>

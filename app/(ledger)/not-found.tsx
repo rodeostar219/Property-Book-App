@@ -7,7 +7,7 @@ export default function LedgerNotFound() {
       <PackageOpen />
       <h2>Not found</h2>
       <p>
-        That property record or exception is not in the Slice A fixture set.{" "}
+        That property record or exception is not visible to this identity.{" "}
         <Link href="/">Return home</Link>
       </p>
     </section>

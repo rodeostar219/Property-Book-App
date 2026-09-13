@@ -1,7 +1,7 @@
 import { chatGPTSignInPath, chatGPTSignOutPath } from "@/app/chatgpt-auth";
 import { AppShell } from "@/components/ledger/app-shell";
 import { getActor, getChatGPTUserSafe } from "@/lib/ledger/identity";
-import { getExceptionsFor } from "@/lib/ledger/queries";
+import { loadWorkspace } from "@/lib/oda/workspace";
 
 export const dynamic = "force-dynamic";
 
@@ -12,12 +12,12 @@ export default async function LedgerLayout({
 }) {
   const actor = await getActor();
   const user = await getChatGPTUserSafe();
-  const exceptionCount = getExceptionsFor(actor).length;
+  const workspace = await loadWorkspace(actor);
 
   return (
     <AppShell
       actor={actor}
-      exceptionCount={exceptionCount}
+      exceptionCount={workspace.exceptions.length}
       signedIn={Boolean(user)}
       signInHref={chatGPTSignInPath("/")}
       signOutHref={chatGPTSignOutPath("/")}

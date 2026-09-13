@@ -29,13 +29,14 @@ export function PropertyTable({
         <thead>
           <tr>
             {selectable ? <th></th> : null}
-            <th>NSN / item</th>
+            <th>NSN / official name</th>
+            <th>Actual name</th>
             <th>Serial number</th>
+            <th>Section</th>
             <th>Accountability</th>
             <th>Network</th>
-            <th>Signed for</th>
-            <th>Location</th>
-            <th>Source receipt</th>
+            <th>SHR holder</th>
+            <th>Source</th>
             <th>Status</th>
           </tr>
         </thead>
@@ -52,18 +53,19 @@ export function PropertyTable({
                 </td>
               ) : null}
               <td>
-                <Link href={`/items/${item.id}`} className="item-link">
+                <Link href={`/lines/${item.id}`} className="item-link">
                   <code>{item.nsn}</code>
-                  <b>{item.name}</b>
+                  <b>{item.officialName ?? item.name}</b>
                 </Link>
               </td>
+              <td>{item.commonName ?? "not recorded"}</td>
               <td>
                 <strong>{formatSerial(item.serial)}</strong>
               </td>
+              <td>{item.sectionLetter ?? "ODA"}</td>
               <td>{item.accountabilityClass}</td>
               <td>{item.networkClassification}</td>
-              <td>{item.assignedToName ?? "—"}</td>
-              <td>{item.location}</td>
+              <td>{item.shrHolderName ?? "not recorded"}</td>
               <td>
                 <small>{item.sourceReceipt}</small>
               </td>

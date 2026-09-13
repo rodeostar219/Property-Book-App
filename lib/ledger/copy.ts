@@ -1,12 +1,16 @@
+import { COMPANION_DISCLAIMER, ODA } from "@/lib/oda/org";
+import { INJECT_ACTION_LABEL, INJECT_LABEL } from "@/lib/oda/types";
+
 export const UNIT = {
-  name: "SFODA-1223",
-  uic: "W51HXC",
-  document: "WH1FB3PB",
-  receiptLabel: "18E",
+  name: ODA.name,
+  uic: ODA.uic,
+  document: ODA.document,
+  receiptLabel: ODA.receiptLabel,
+  group: ODA.group,
+  installation: ODA.installation,
 } as const;
 
-export const SHR_FIRST_USE =
-  "Sub-hand receipt (SHR)";
+export const SHR_FIRST_USE = "Sub-hand receipt (SHR)";
 
 export const PHRH_NOTE =
   "A Sub-hand receipt (SHR) does not relieve the primary hand receipt holder (PHRH). Both remain visible on the end item.";
@@ -19,18 +23,25 @@ export const RENEWAL_PLACEHOLDER_NOTE =
 export const DA_2062_TITLE = "DA Form 2062";
 export const DA_2062_SUBTITLE = "Hand Receipt/Shortage Listing";
 
+export const COMPANION_NOTE = COMPANION_DISCLAIMER;
+export const INJECT_FEED_LABEL = INJECT_LABEL;
+export const INJECT_BUTTON_LABEL = INJECT_ACTION_LABEL;
+
 export const NOT_WIRED = {
   resolve:
-    "Resolve is not persisted yet. Slice C will require an audit note before an exception can close.",
+    "Resolve is not persisted yet. A required audit note before close stays out of Sprint 1.",
   accept:
-    "Accept is not persisted in Slice A. The PHRH/SHR inventory ceremony is Slice D.",
-  custody: "Custody changes are not persisted in Slice A.",
-  location: "Location changes are not persisted in Slice A.",
-  export: "Export is not wired in Slice A — no file is generated.",
-  addProperty: "Adding property is not persisted in Slice A.",
-  importDocument: "Document import is not persisted in Slice A.",
-  importComponents: "COEI / BII / AAL import is not persisted in Slice A.",
-  addNote: "Notes are not persisted in Slice A.",
+    "Accept / inventory ceremony is out of Sprint 1. Use Sub-hand receipt update for an electronic 18E extract.",
+  custody: "Custody changes are not persisted in Sprint 1.",
+  location: "Location changes are not persisted in Sprint 1.",
+  export: "Export is not wired — no file is generated.",
+  addProperty: "Adding property is not persisted in Sprint 1.",
+  importDocument: "Scanned DA Form 2062 attach is Sprint 2. Document import is not persisted here.",
+  importComponents: "COEI / BII / AAL import is not persisted in Sprint 1.",
+  addNote: "Notes are not persisted in Sprint 1.",
+  d1Down: "D1 is unavailable. This mutation is disabled so the UI cannot fake a commit.",
+  sectionLocked:
+    "Section isolation: this identity cannot see or edit another section's Sub-hand receipt (SHR).",
 } as const;
 
 export function formatSerial(serial: string | null | undefined): string {

@@ -3,9 +3,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Property Ledger | W51HXC",
+  title: "ODA Property Workspace | W51HXC",
   description:
-    "Soldier-first property accountability for SFODA-1223. Hand receipt and Sub-hand receipt (SHR) tracking.",
+    "Operational property workspace for ODA-1223, 1st SFG (A), JBLM. Companion to GCSS-Army / APSR — not a system of record.",
   icons: { icon: "/favicon.svg", shortcut: "/favicon.svg" },
 };
 

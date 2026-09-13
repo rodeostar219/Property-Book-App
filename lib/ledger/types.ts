@@ -1,4 +1,7 @@
+import type { ActorScope, DemoIdentity, SectionLetter } from "@/lib/oda/types";
+
 export type AppRole = "soldier" | "pm";
+export type { ActorScope, DemoIdentity, SectionLetter };
 
 export type AccountabilityClass =
   | "Accountable"
@@ -28,6 +31,10 @@ export type Actor = {
   role: AppRole;
   email: string;
   grade?: string;
+  mos?: string;
+  sectionLetter?: SectionLetter;
+  scope: ActorScope;
+  identity: DemoIdentity;
 };
 
 export type ComponentLine = {
@@ -45,6 +52,8 @@ export type PropertyItem = {
   id: string;
   nsn: string;
   name: string;
+  officialName?: string;
+  commonName?: string;
   serial: string | null;
   quantityRequired: number;
   quantityOnHand: number;
@@ -61,7 +70,9 @@ export type PropertyItem = {
   shrHolderId?: string;
   shrHolderName?: string;
   shrDocument?: string;
+  sectionLetter?: SectionLetter;
   components: ComponentLine[];
+  photoData?: string | null;
 };
 
 export type LedgerException = {
@@ -73,6 +84,11 @@ export type LedgerException = {
   action: string;
   severity: "Review" | "Missing data" | "Shortage";
   assignedToId: string | null;
+  sectionLetter?: SectionLetter | null;
+  sourceA?: string;
+  sourceB?: string;
+  factA?: string;
+  factB?: string;
 };
 
 export type ReceiptRecord = {
