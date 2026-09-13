@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { FileSearch, UploadCloud } from "lucide-react";
 import { CompanionBanner } from "@/components/ledger/companion-banner";
-import { DisabledAction } from "@/components/ledger/disabled-action";
 import { CurrentBadge } from "@/components/ledger/app-shell";
+import { Button } from "@/components/ui/button";
 import { InjectPanel } from "@/components/ledger/inject-panel";
 import { PageHeader } from "@/components/ledger/page-header";
 import { PhrhChrome } from "@/components/ledger/phrh-note";
-import { INJECT_FEED_LABEL, NOT_WIRED } from "@/lib/ledger/copy";
+import { INJECT_FEED_LABEL } from "@/lib/ledger/copy";
 import { requirePm } from "@/lib/ledger/identity";
 import { getReceipts } from "@/lib/ledger/queries";
 import { loadWorkspace } from "@/lib/oda/workspace";
@@ -29,11 +29,12 @@ export default async function ReceiptsPage() {
         title="Hand receipts"
         description="ODA hand receipt plus electronic Sub-hand receipt (SHR) inject history. Not a monthly product. Not Accept theater."
         actions={
-          <DisabledAction
-            label="Import scanned 2062"
-            reason={NOT_WIRED.importDocument}
-            icon={<UploadCloud />}
-          />
+          <Button asChild>
+            <Link href="/receipts/2062-in">
+              <UploadCloud />
+              Import DA 2062 in
+            </Link>
+          </Button>
         }
       />
 

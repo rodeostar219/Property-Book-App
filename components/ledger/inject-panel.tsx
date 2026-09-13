@@ -47,7 +47,7 @@ export function InjectPanel({
           <p>
             Electronic 18E Sub-hand receipt (SHR). Diff writes versioned history; mismatches
             open a discrepancy. Not Accept theater. Prior snapshots stay queryable. Scanned DA
-            Form 2062 is out of Sprint 1.
+            Form 2062 in is a separate confirm-before-write flow.
           </p>
         </div>
       </div>

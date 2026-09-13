@@ -22,6 +22,10 @@ export const RENEWAL_PLACEHOLDER_NOTE =
 
 export const DA_2062_TITLE = "DA Form 2062";
 export const DA_2062_SUBTITLE = "Hand Receipt/Shortage Listing";
+export const DA_2062_IN_TITLE = "DA Form 2062 in";
+export const DA_2062_IN_NOTE =
+  "Scan / import IN only. Confirm before write. Success adds to signed-for plus history — not Accept theater. Companion to GCSS-Army / APSR — a PDF does not invent formal APSR accountability.";
+export const ADD_TO_SIGNED_FOR = "Add to signed-for";
 
 export const COMPANION_NOTE = COMPANION_DISCLAIMER;
 export const INJECT_FEED_LABEL = INJECT_LABEL;
@@ -36,8 +40,10 @@ export const NOT_WIRED = {
   location: "Location changes are not persisted in Sprint 1.",
   export: "Export is not wired — no file is generated.",
   addProperty: "Adding property is not persisted in Sprint 1.",
-  importDocument: "Scanned DA Form 2062 attach is Sprint 2. Document import is not persisted here.",
-  importComponents: "COEI / BII / AAL import is not persisted in Sprint 1.",
+  importDocument: "DA Form 2062 out, boxes, and DD Form 1750 generate stay out of this slice.",
+  importComponents: "COEI / BII / AAL / component CHR import is out of this 2062-in slice.",
+  da2062Out: "DA Form 2062 out is the next slice. Return dates stay out of this PR.",
+  da2062Boxes: "Boxes and DD Form 1750 generate stay out of this 2062-in slice.",
   addNote: "Notes are not persisted in Sprint 1.",
   d1Down: "D1 is unavailable. This mutation is disabled so the UI cannot fake a commit.",
   sectionLocked:
