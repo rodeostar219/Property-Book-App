@@ -10,6 +10,7 @@ import {
   ADD_TO_SIGNED_FOR_LABEL,
   bytesToBase64,
   DA2062_MAX_PDF_BYTES,
+  defaultDispositionForLine,
   destinationLabel,
   enrichDa2062Lines,
   parseDa2062Pdf,
@@ -41,6 +42,7 @@ export type ParseDa2062Result =
       draft: Da2062InDraft;
       enriched: Da2062EnrichedLine[];
       conflicts: SourceConflict[];
+      defaultDispositions: LineDisposition[];
     }
   | { ok: false; message: string; reason?: string };
 
@@ -271,6 +273,7 @@ export async function parseDa2062In(formData: FormData): Promise<ParseDa2062Resu
   };
   const enriched = enrichDa2062Lines(draft.lines, pictures);
   const conflicts = previewDa2062Conflicts(draft);
+  const defaultDispositions = enriched.map((line) => defaultDispositionForLine(line, conflicts));
   return {
     ok: true,
     message:
@@ -278,6 +281,7 @@ export async function parseDa2062In(formData: FormData): Promise<ParseDa2062Resu
     draft,
     enriched,
     conflicts,
+    defaultDispositions,
   };
 }
 

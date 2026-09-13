@@ -199,7 +199,9 @@ describe("DA Form 2062 in", () => {
     if (!parsed.ok) return;
     const conflicts = previewDa2062Conflicts(parsed.draft);
     const defaults = parsed.draft.lines.map((line) => defaultDispositionForLine(line, conflicts));
-    assert.ok(defaults.includes("flag"));
+    assert.equal(defaults[0], "flag");
+    assert.equal(defaults[3], "flag");
+    assert.ok(defaults.includes("accept"));
     const allSkip = planDa2062Confirm({
       lines: parsed.draft.lines,
       dispositions: parsed.draft.lines.map(() => "skip"),

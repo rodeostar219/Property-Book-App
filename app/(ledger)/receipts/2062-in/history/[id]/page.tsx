@@ -4,7 +4,7 @@ import { CompanionBanner } from "@/components/ledger/companion-banner";
 import { PageHeader } from "@/components/ledger/page-header";
 import { formatSerial } from "@/lib/ledger/copy";
 import { getActor } from "@/lib/ledger/identity";
-import { destinationLabel } from "@/lib/oda/da2062";
+import { destinationLabel, gainingPartyLabel } from "@/lib/oda/da2062";
 import type { Da2062DestinationKind } from "@/lib/oda/types";
 import { loadDa2062Detail } from "@/lib/oda/workspace";
 
@@ -39,7 +39,14 @@ export default async function Da2062InHistoryPage({
           </div>
           <div>
             <small>Gaining party</small>
-            <strong>{record.gainingParty}</strong>
+            <strong>
+              {gainingPartyLabel({
+                destinationKind: record.destinationKind as Da2062DestinationKind,
+                destinationSection: record.destinationSection,
+                gainingParty: record.gainingParty,
+                gainingSection: record.gainingSection,
+              })}
+            </strong>
           </div>
           <div>
             <small>Destination</small>
