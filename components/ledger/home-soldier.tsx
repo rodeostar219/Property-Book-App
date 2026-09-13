@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, Package } from "lucide-react";
+import { AlertTriangle, Package, ScrollText } from "lucide-react";
 import { Metric } from "@/components/ledger/metric";
 import { PageHeader } from "@/components/ledger/page-header";
 import { SectionSwitcher } from "@/components/ledger/section-switcher";
@@ -76,6 +76,24 @@ export function SoldierHome({
           )}
         </section>
       </div>
+      <section className="panel">
+        <div className="panel-head">
+          <div>
+            <h2>DA Form 2062 in</h2>
+            <p>Scan or electronic extract onto your section SHR. Confirm before write.</p>
+          </div>
+          <Link href="/receipts/2062-in">Open 2062 in</Link>
+        </div>
+        <article className="da2062-home-cta">
+          <span className="activity-icon">
+            <ScrollText />
+          </span>
+          <div>
+            <b>Import onto {actor.sectionLetter ? `${actor.sectionLetter} SHR` : "your section"}</b>
+            <p>Ryan 18E path at JBLM. Out, return dates, boxes, and 1750 stay out of this slice.</p>
+          </div>
+        </article>
+      </section>
     </>
   );
 }

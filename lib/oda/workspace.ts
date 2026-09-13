@@ -16,10 +16,15 @@ import { ODA, sectionShrLabel, sectionTitle } from "./org";
 import { asPhotoSrc, stencilDataUri } from "./picture-book";
 import {
   ensureOdaStore,
+  getDa2062Import,
   getInject,
+  listDa2062Imports,
   listDiscrepancies,
   listInjects,
   listPictureBooks,
+  type Da2062ImportLineRecord,
+  type Da2062ImportRecord,
+  type CustodyInRecord,
   type DiscrepancyRecord,
   type InjectLineRecord,
   type InjectRecord,
@@ -60,6 +65,7 @@ export type Workspace = {
   exceptions: LedgerException[];
   injects: InjectRecord[];
   pictures: PictureBookRow[];
+  da2062Imports: Da2062ImportRecord[];
 };
 
 function applyPicture(item: PropertyItem, pictures: PictureBookRow[]): LayeredLine {
@@ -140,6 +146,11 @@ export async function loadWorkspace(actor: Actor): Promise<Workspace> {
         )
       : fixtureInjects(actor);
 
+  const da2062Imports =
+    persistence === "d1"
+      ? (await listDa2062Imports()).filter((row) => canSeeDa2062Import(actor, row))
+      : [];
+
   const sections = SECTION_LETTERS.map((letter) => {
     const holder = Object.values(PEOPLE).find((person) => person.sectionLetter === letter);
     return {
@@ -154,7 +165,13 @@ export async function loadWorkspace(actor: Actor): Promise<Workspace> {
     };
   });
 
-  return { persistence, sections, items, exceptions, injects, pictures };
+  return { persistence, sections, items, exceptions, injects, pictures, da2062Imports };
+}
+
+function canSeeDa2062Import(actor: Actor, row: Da2062ImportRecord): boolean {
+  if (row.destinationKind === "oda_hr") return isOdaVisible(actor);
+  if (row.destinationSection) return canViewSection(actor, row.destinationSection);
+  return isOdaVisible(actor);
 }
 
 function isOdaVisible(actor: Actor): boolean {
@@ -211,6 +228,22 @@ export async function loadInjectDetail(actor: Actor, id: number) {
   if (detail.inject.sectionLetter && !canViewSection(actor, detail.inject.sectionLetter)) {
     return null;
   }
+  return { persistence, ...detail };
+}
+
+export async function loadDa2062Detail(actor: Actor, id: number): Promise<{
+  persistence: PersistenceMode;
+  record: Da2062ImportRecord;
+  lines: Da2062ImportLineRecord[];
+  events: CustodyInRecord[];
+  sourcePdfData: string | null;
+  sourcePdfContentType: string | null;
+} | null> {
+  const persistence = await ensureOdaStore();
+  if (persistence !== "d1") return null;
+  const detail = await getDa2062Import(id);
+  if (!detail) return null;
+  if (!canSeeDa2062Import(actor, detail.record)) return null;
   return { persistence, ...detail };
 }
 

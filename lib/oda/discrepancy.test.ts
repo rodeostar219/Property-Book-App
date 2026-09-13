@@ -60,6 +60,35 @@ describe("source conflicts", () => {
     assert.equal(conflicts[0].severity, "Shortage");
   });
 
+  it("ignores picture-book common name even when picture facts are included", () => {
+    const conflicts = detectSourceConflicts(
+      [
+        {
+          source: "da_2062",
+          nsn: "580501C949317",
+          serial: "300415040404300",
+          lin: null,
+          nomenclature: "Telephone, Satellite: 9575A Iridium",
+          quantity: 1,
+          present: true,
+          sectionLetter: "E",
+        },
+        {
+          source: "picture_book",
+          nsn: "580501C949317",
+          serial: "300415040404300",
+          lin: null,
+          nomenclature: "Iridium",
+          quantity: 1,
+          present: true,
+          sectionLetter: "E",
+        },
+      ],
+      { includePictureBook: true },
+    );
+    assert.equal(conflicts.length, 0);
+  });
+
   it("does not treat picture-book common name as an accountability conflict", () => {
     const conflicts = detectSourceConflicts([
       {

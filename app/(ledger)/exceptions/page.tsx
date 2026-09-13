@@ -23,7 +23,7 @@ export default async function ExceptionsPage() {
         title="Exceptions"
         description={
           actor.role === "pm"
-            ? "Source conflicts across hand receipt, tracker, picture book, and DD Form 1750. Resolve stays unwired."
+            ? "Source conflicts across hand receipt, tracker, picture book, DD Form 1750, and DA Form 2062. Resolve stays unwired."
             : "Discrepancies on your section. Other sections stay isolated."
         }
         actions={
