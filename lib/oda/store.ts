@@ -29,7 +29,7 @@ import { detectSourceConflicts, type SourceFact } from "./discrepancy";
 import { identityKey } from "./identity-key";
 import { diffElectronicShr, injectCounts } from "./inject";
 import { ODA } from "./org";
-import { stencilSvg } from "./picture-book";
+import { stencilDataUri } from "./picture-book";
 import { ODA_SCHEMA_SQL } from "./schema-sql";
 import { INJECT_LABEL, SECTION_LETTERS, SECTION_META, type ElectronicShrLine, type SectionLetter } from "./types";
 
@@ -108,7 +108,10 @@ export async function ensureOdaStore(): Promise<PersistenceMode> {
   const binding = d1();
   if (!binding) return "unavailable";
   try {
-    await binding.exec(ODA_SCHEMA_SQL);
+    const statements = ODA_SCHEMA_SQL.split(";").map((part) => part.trim()).filter(Boolean);
+    for (const statement of statements) {
+      await binding.prepare(statement).run();
+    }
     const db = getDb();
     const existing = await db.select().from(odaUnits).limit(1);
     if (existing.length === 0) {
@@ -178,7 +181,7 @@ async function seedOdaStore() {
       accountabilityLineKey: line.key,
       officialName: line.officialName,
       commonName: line.commonName,
-      photoData: stencilSvg(line.commonName, line.officialName),
+      photoData: stencilDataUri(line.commonName, line.officialName),
       photoContentType: "image/svg+xml",
       photoUpdatedAt: BASELINE_INJECT_AT,
       photoUpdatedBy: "seed",
@@ -209,7 +212,6 @@ async function seedOdaStore() {
     });
   }
 
-  let priorId: number | null = null;
   for (const letter of SECTION_LETTERS) {
     const current = electronicShrForSection(letter);
     const inserted: Array<{ id: number }> = await db
@@ -221,7 +223,7 @@ async function seedOdaStore() {
         injectedAt: BASELINE_INJECT_AT,
         injectedBy: PEOPLE.ortiz.fullName,
         sourceKind: "electronic_shr",
-        priorInjectId: priorId,
+        priorInjectId: null,
         addedCount: current.length,
         removedCount: 0,
         changedCount: 0,
@@ -231,7 +233,6 @@ async function seedOdaStore() {
       .returning({ id: shrInjects.id });
     const injectId: number | undefined = inserted[0]?.id;
     if (!injectId) throw new Error("Failed to seed SHR inject.");
-    priorId = injectId;
     for (const line of current) {
       await db.insert(shrInjectLines).values({
         injectId,

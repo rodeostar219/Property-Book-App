@@ -13,7 +13,7 @@ import {
 } from "./catalog";
 import { canViewSection, visibleSectionLetters } from "./access";
 import { ODA, sectionShrLabel, sectionTitle } from "./org";
-import { stencilSvg } from "./picture-book";
+import { asPhotoSrc, stencilDataUri } from "./picture-book";
 import {
   ensureOdaStore,
   getInject,
@@ -71,7 +71,10 @@ function applyPicture(item: PropertyItem, pictures: PictureBookRow[]): LayeredLi
     ...item,
     officialName: picture?.officialName ?? item.officialName,
     commonName: picture?.commonName ?? item.commonName,
-    photoData: picture?.photoData ?? item.photoData ?? stencilSvg(item.commonName ?? item.name, item.name),
+    photoData: asPhotoSrc(
+      picture?.photoData ?? item.photoData ?? stencilDataUri(item.commonName ?? item.name, item.name),
+      picture?.photoContentType,
+    ),
     layers: {
       accountability: `Hand receipt ${ODA.document} · ${item.officialName ?? item.name}`,
       responsibility: item.shrDocument

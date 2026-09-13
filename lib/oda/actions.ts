@@ -5,7 +5,7 @@ import { getActor } from "@/lib/ledger/identity";
 import { assertCanViewSection } from "./access";
 import { catalogLineOrThrow } from "./workspace";
 import { demoIncomingEchoShr } from "./catalog";
-import { stencilSvg } from "./picture-book";
+import { stencilDataUri } from "./picture-book";
 import {
   ensureOdaStore,
   readAccountabilitySnapshot,
@@ -59,7 +59,10 @@ export async function replaceLinePhoto(
     photoContentType = file.type || "application/octet-stream";
     photoData = `data:${photoContentType};base64,${btoa(binary)}`;
   } else {
-    photoData = stencilSvg(line.commonName, line.officialName);
+    photoData = stencilDataUri(
+      String(formData.get("commonName") ?? line.commonName),
+      line.officialName,
+    );
     photoContentType = "image/svg+xml";
   }
 

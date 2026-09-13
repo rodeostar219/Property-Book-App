@@ -2,8 +2,10 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   allowedPictureBookColumns,
+  asPhotoSrc,
   forbiddenAccountabilityMutationFromPhoto,
   pictureBookTouchesAccountability,
+  stencilDataUri,
   stencilSvg,
 } from "./picture-book";
 
@@ -20,5 +22,8 @@ describe("picture book is visual only", () => {
     assert.match(svg, /Visual ID only/);
     assert.doesNotMatch(svg, /quantity/);
     assert.doesNotMatch(svg, /serial_number/);
+    const src = asPhotoSrc(svg, "image/svg+xml");
+    assert.ok(src?.startsWith("data:image/svg+xml"));
+    assert.ok(stencilDataUri("Iridium", "Telephone, Satellite: 9575A Iridium").startsWith("data:"));
   });
 });

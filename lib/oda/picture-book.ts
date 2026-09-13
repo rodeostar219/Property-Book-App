@@ -43,6 +43,19 @@ export function forbiddenAccountabilityMutationFromPhoto(): readonly string[] {
   ] as const;
 }
 
+export function stencilDataUri(commonName: string, officialName: string): string {
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(stencilSvg(commonName, officialName))}`;
+}
+
+export function asPhotoSrc(photoData: string | null | undefined, contentType?: string | null): string | null {
+  if (!photoData) return null;
+  if (photoData.startsWith("data:")) return photoData;
+  if (photoData.includes("<svg")) {
+    return `data:${contentType || "image/svg+xml"};charset=utf-8,${encodeURIComponent(photoData)}`;
+  }
+  return photoData;
+}
+
 export function stencilSvg(commonName: string, officialName: string): string {
   const common = escapeXml(commonName || "Common name");
   const official = escapeXml(officialName || "Official name");

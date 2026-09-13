@@ -1,5 +1,5 @@
 import { ODA, sectionShrLabel } from "./org";
-import { stencilSvg } from "./picture-book";
+import { stencilDataUri } from "./picture-book";
 import type { ElectronicShrLine, SectionLetter, SourceConflict } from "./types";
 import type {
   AccountabilityClass,
@@ -625,7 +625,7 @@ export function toPropertyItem(line: CatalogLine): PropertyItem {
     shrDocument: sectionShrLabel(line.sectionLetter),
     sectionLetter: line.sectionLetter,
     components: line.components,
-    photoData: stencilSvg(line.commonName, line.officialName),
+    photoData: stencilDataUri(line.commonName, line.officialName),
   };
 }
 
