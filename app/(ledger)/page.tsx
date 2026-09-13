@@ -21,6 +21,7 @@ export default async function HomePage() {
           exceptionCount={workspace.exceptions.length}
           exceptions={workspace.exceptions}
           renewSoon={getLoans().filter((loan) => loan.status === "Renew soon")}
+          sections={workspace.sections}
         />
       </>
     );
@@ -33,6 +34,7 @@ export default async function HomePage() {
         actor={actor}
         items={workspace.items}
         exceptions={workspace.exceptions}
+        sections={workspace.sections}
       />
     </>
   );

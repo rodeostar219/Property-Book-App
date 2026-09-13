@@ -2,7 +2,7 @@ import { Download, Plus, UploadCloud } from "lucide-react";
 import { CompanionBanner } from "@/components/ledger/companion-banner";
 import { DisabledAction } from "@/components/ledger/disabled-action";
 import { PageHeader } from "@/components/ledger/page-header";
-import { PropertyTable } from "@/components/ledger/property-table";
+import { PropertySearch } from "@/components/ledger/property-search";
 import { NOT_WIRED } from "@/lib/ledger/copy";
 import { getActor } from "@/lib/ledger/identity";
 import { loadWorkspace } from "@/lib/oda/workspace";
@@ -54,16 +54,14 @@ export default async function MyPropertyPage() {
           </>
         }
       />
-      <section className="panel">
-        <PropertyTable
-          items={items}
-          empty={
-            actor.role === "pm"
-              ? "This Property Manager identity has no personal signed-for lines. Use ODA property for the book."
-              : "No property is visible on this section Sub-hand receipt (SHR)."
-          }
-        />
-      </section>
+      <PropertySearch
+        items={items}
+        empty={
+          actor.role === "pm"
+            ? "This Property Manager identity has no personal signed-for lines. Use ODA property for the book."
+            : "No property is visible on this section Sub-hand receipt (SHR)."
+        }
+      />
     </>
   );
 }

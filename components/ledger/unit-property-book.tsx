@@ -52,7 +52,7 @@ export function UnitPropertyBook({ items }: { items: PropertyItem[] }) {
             <Search />
             <input
               aria-label="Search property"
-              placeholder="Search NSN, serial, item, person, or location"
+              placeholder="Search NSN / serial / common name / section"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
             />

@@ -6,7 +6,7 @@
 export const PICTURE_BOOK_LAYER = "visual_id" as const;
 
 export const PICTURE_BOOK_NOTICE =
-  "Visual identification only. Adding or replacing a photo, official name display, or common/actual name does not create, change, or delete accountability.";
+  "Visual identification only. Adding or replacing a photo, official name display, or common/actual name does not create, change, or delete accountability, and never implies Accept theater.";
 
 export type PictureBookWrite = {
   lineKey: string;

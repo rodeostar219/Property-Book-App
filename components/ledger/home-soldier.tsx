@@ -2,18 +2,22 @@ import Link from "next/link";
 import { AlertTriangle, Package } from "lucide-react";
 import { Metric } from "@/components/ledger/metric";
 import { PageHeader } from "@/components/ledger/page-header";
+import { SectionSwitcher } from "@/components/ledger/section-switcher";
 import { StatusChip } from "@/components/ledger/status-chip";
 import { formatSerial, UNIT } from "@/lib/ledger/copy";
 import type { Actor, LedgerException, PropertyItem } from "@/lib/ledger/types";
+import type { SectionCard } from "@/lib/oda/workspace";
 
 export function SoldierHome({
   actor,
   items,
   exceptions,
+  sections,
 }: {
   actor: Actor;
   items: PropertyItem[];
   exceptions: LedgerException[];
+  sections: SectionCard[];
 }) {
   return (
     <>
@@ -22,6 +26,7 @@ export function SoldierHome({
         description="Your section Sub-hand receipt (SHR) — not the ODA property book."
         meta={`${UNIT.uic} ${UNIT.name} · ${UNIT.group} · ${UNIT.installation} · ${actor.mos ?? "18E"} ${actor.sectionLetter ? `section ${actor.sectionLetter}` : ""}`}
       />
+      <SectionSwitcher sections={sections} active={actor.sectionLetter} />
       <div className="metrics soldier-metrics">
         <Metric
           label="SIGNED FOR"
@@ -42,10 +47,10 @@ export function SoldierHome({
         <section className="panel">
           <div className="panel-head">
             <div>
-              <h2>Your signed-for property</h2>
-              <p>Open a hand-receipt line for picture book and layered facts.</p>
+              <h2>My signed-for</h2>
+              <p>Section Sub-hand receipt (SHR) lines — tap a line for official / actual name and photo.</p>
             </div>
-            <Link href="/my-property">Open my property</Link>
+            <Link href="/my-property">Open my section</Link>
           </div>
           <ul className="home-item-list">
             {items.map((item) => (

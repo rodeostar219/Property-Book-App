@@ -4,7 +4,8 @@ import { CompanionBanner } from "@/components/ledger/companion-banner";
 import { InjectPanel } from "@/components/ledger/inject-panel";
 import { PageHeader } from "@/components/ledger/page-header";
 import { PhrhChrome } from "@/components/ledger/phrh-note";
-import { PropertyTable } from "@/components/ledger/property-table";
+import { PropertySearch } from "@/components/ledger/property-search";
+import { SectionSwitcher } from "@/components/ledger/section-switcher";
 import { getActor } from "@/lib/ledger/identity";
 import { canViewSection } from "@/lib/oda/access";
 import { SECTION_LETTERS, type SectionLetter } from "@/lib/oda/types";
@@ -52,6 +53,7 @@ export default async function SectionPage({
         description={`Section Sub-hand receipt (SHR) under the ${ODA.name} hand receipt. PHRH remains ${ODA.phrhName}.`}
         meta={`${items.length} visible line${items.length === 1 ? "" : "s"} · holder ${card?.holderName ?? "unassigned"}`}
       />
+      <SectionSwitcher sections={workspace.sections} active={letter} />
       <PhrhChrome
         source={{
           phrhName: ODA.phrhName,
@@ -64,12 +66,10 @@ export default async function SectionPage({
         persistence={workspace.persistence}
         canEdit={canViewSection(actor, letter)}
       />
-      <section className="panel">
-        <PropertyTable
-          items={items}
-          empty="No accountability lines on this section Sub-hand receipt (SHR)."
-        />
-      </section>
+      <PropertySearch
+        items={items}
+        empty="No accountability lines on this section Sub-hand receipt (SHR)."
+      />
     </>
   );
 }

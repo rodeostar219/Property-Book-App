@@ -8,8 +8,10 @@ import {
 import { CurrentBadge } from "@/components/ledger/app-shell";
 import { Metric } from "@/components/ledger/metric";
 import { PageHeader } from "@/components/ledger/page-header";
+import { SectionSwitcher } from "@/components/ledger/section-switcher";
 import { UNIT } from "@/lib/ledger/copy";
 import type { Actor, LedgerException, LoanRecord } from "@/lib/ledger/types";
+import type { SectionCard } from "@/lib/oda/workspace";
 
 export function PmHome({
   actor,
@@ -17,12 +19,14 @@ export function PmHome({
   exceptionCount,
   exceptions,
   renewSoon,
+  sections,
 }: {
   actor: Actor;
   itemCount: number;
   exceptionCount: number;
   exceptions: LedgerException[];
   renewSoon: LoanRecord[];
+  sections: SectionCard[];
 }) {
   return (
     <>
@@ -32,6 +36,7 @@ export function PmHome({
         meta={`${UNIT.uic} ${UNIT.name} · ${UNIT.group} · ${UNIT.installation} · ${actor.fullName}`}
         actions={<CurrentBadge>Hand receipt current</CurrentBadge>}
       />
+      <SectionSwitcher sections={sections} />
       <div className="metrics">
         <Metric
           label="ODA PROPERTY"
