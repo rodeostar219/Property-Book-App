@@ -296,9 +296,6 @@ export function parseDa2062OutPdf(
   if (!returnDate) {
     warnings.push("Return date is required on Confirm before write. Past due is warn only.");
   }
-  for (const warning of returnDateWarnings(returnDate)) {
-    if (warning.kind !== "return_date_required") warnings.push(warning.message);
-  }
 
   return {
     ok: true,

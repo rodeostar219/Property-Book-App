@@ -106,7 +106,8 @@ describe("DA Form 2062 out", () => {
     assert.equal(parsed.ok, true);
     if (!parsed.ok) return;
     assert.equal(parsed.draft.returnDate, "2026-08-15");
-    assert.ok(parsed.draft.warnings.some((warning) => /past due/i.test(warning)));
+    const pastDueOnDraft = returnDateWarnings(parsed.draft.returnDate, asOf);
+    assert.ok(pastDueOnDraft.some((warning) => warning.kind === "past_due"));
     const check = validateDa2062Out({
       actor: echo,
       issuerSection: "E",
