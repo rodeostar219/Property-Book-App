@@ -4,6 +4,7 @@ import type { AccountabilityStatus, PropertyItem } from "@/lib/ledger/types";
 
 const tone: Record<AccountabilityStatus, string> = {
   signed_for: "green",
+  signed_out: "amber",
   on_hand: "green",
   needs_serial_check: "amber",
   shortage_recorded: "red",
@@ -18,6 +19,12 @@ export function StatusChip({ item }: { item: PropertyItem }) {
   return (
     <span className="status-stack">
       <span className={`pill ${tone[item.status]}`}>{statusText(item)}</span>
+      {item.returnDate ? (
+        <span className={`pill ${item.status === "signed_out" ? "amber" : "blue"}`}>
+          Return {item.returnDate}
+        </span>
+      ) : null}
+      {item.signedOutTo ? <span className="pill blue">{item.signedOutTo}</span> : null}
       {item.unitTracking ? (
         <span className="pill blue">{UNIT_TRACKING_LABEL[item.unitTracking]}</span>
       ) : null}

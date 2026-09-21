@@ -13,6 +13,7 @@ export type NetworkClassification = "SIPR" | "NIPR" | "Unclassified";
 
 export type AccountabilityStatus =
   | "signed_for"
+  | "signed_out"
   | "on_hand"
   | "needs_serial_check"
   | "shortage_recorded";
@@ -74,6 +75,8 @@ export type PropertyItem = {
   components: ComponentLine[];
   photoData?: string | null;
   detailHref?: string;
+  returnDate?: string | null;
+  signedOutTo?: string | null;
 };
 
 export type LedgerException = {

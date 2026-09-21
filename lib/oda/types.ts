@@ -24,7 +24,9 @@ export type Da2062ParsePath = "electronic" | "ocr";
 
 export type Da2062DestinationKind = "oda_hr" | "section_shr";
 
-export type Da2062Direction = "in";
+export type Da2062OutDestinationKind = "person" | "section" | "organization";
+
+export type Da2062Direction = "in" | "out";
 
 export type LineDisposition = "accept" | "skip" | "flag";
 

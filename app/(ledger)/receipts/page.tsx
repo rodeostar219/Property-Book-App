@@ -29,12 +29,20 @@ export default async function ReceiptsPage() {
         title="Hand receipts"
         description="ODA hand receipt plus electronic Sub-hand receipt (SHR) inject history. Not a monthly product. Not Accept theater."
         actions={
-          <Button asChild>
-            <Link href="/receipts/2062-in">
-              <UploadCloud />
-              Import DA 2062 in
-            </Link>
-          </Button>
+          <div className="split-actions">
+            <Button asChild variant="outline">
+              <Link href="/receipts/2062-in">
+                <UploadCloud />
+                Import DA 2062 in
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link href="/receipts/2062-out">
+                <UploadCloud />
+                Sign out 2062
+              </Link>
+            </Button>
+          </div>
         }
       />
 

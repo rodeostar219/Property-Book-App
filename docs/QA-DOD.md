@@ -30,7 +30,7 @@ Cleared:
 
 Sequence: **2062 in** → **2062 out + return** → **box → editable 1750** → **component CHR import**
 
-### 2062 in (current slice)
+### 2062 in (PR #3)
 
 - Electronic **and** scanned/OCR paths both hit Confirm — never auto-write
 - Confirm shows issuer, gaining party (ODA / section), lines (Official + Actual if known, NSN, serial or not recorded, qty), parse warnings
@@ -41,6 +41,19 @@ Sequence: **2062 in** → **2062 out + return** → **box → editable 1750** �
 - Success asserts DB + history (or disabled if D1 down)
 - Success = add to signed-for + history — **not** Accept theater
 
+### 2062 out (current slice)
+
+- Destinations v1 = person / section / organization only
+- Return date **required** before write
+- Temp ≤30d and past due = **warn only** (no force turn-in / convert)
+- Electronic **and** scanned/OCR paths both hit Confirm — never auto-write
+- Confirm shows issuer, destination (person/section/org), lines (Official + Actual if known, NSN, serial or not recorded, qty), return date, parse warnings
+- Per-line accept / skip / flag discrepancy
+- Cancel leaves zero rows
+- Success asserts DB + history + signed-out state with return date visible (or disabled if D1 down)
+- Success copy: temporary hand receipt / signed-out — **not** Accept theater, not an APSR drop
+- Companion to GCSS/APSR
+
 ### Abuse cases to run
 
 - Truncated / garbage PDF
@@ -49,10 +62,12 @@ Sequence: **2062 in** → **2062 out + return** → **box → editable 1750** �
 - Double-submit / network drop mid-confirm
 - Mislabeled 1750 uploaded as 2062
 - Conflict with existing HR/tracker → discrepancy, not merge
+- Past-due return date still confirms (warn only)
+- Missing return date cannot commit
+- Location-style destination rejected
 
 ### Later Sprint 2 slices
 
-- **Out:** destinations = person / section / organization only; return date **required**; temp ≤30d and past due = **warn only** (no force turn-in)
 - **DD 1750:** packing/container layer only; editable in-app before print/download; never flips signed-for
 - **Component CHR:** COEI/BII/AAL language; shortages on CHR/shortage listing; last in sequence
 

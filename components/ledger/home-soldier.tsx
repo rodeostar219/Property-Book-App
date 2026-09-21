@@ -90,8 +90,18 @@ export function SoldierHome({
           </span>
           <div>
             <b>Import onto {actor.sectionLetter ? `${actor.sectionLetter} SHR` : "your section"}</b>
-            <p>Ryan 18E path at JBLM. Out, return dates, boxes, and 1750 stay out of this slice.</p>
+            <p>Ryan 18E path at JBLM. Import in or sign out a temporary hand receipt. Boxes and DD Form 1750 stay later.</p>
           </div>
+        </article>
+        <article className="da2062-home-cta">
+          <span className="activity-icon">
+            <ScrollText />
+          </span>
+          <div>
+            <b>Sign out a temporary hand receipt</b>
+            <p>Person / section / organization + required return date. Past due is warn only.</p>
+          </div>
+          <Link href="/receipts/2062-out">Open 2062 out</Link>
         </article>
       </section>
     </>

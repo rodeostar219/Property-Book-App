@@ -19,14 +19,22 @@ export default async function DocumentsPage() {
       <CompanionBanner persistence={workspace.persistence} />
       <PageHeader
         title="Documents"
-        description="Source hand receipts, electronic Sub-hand receipts (SHR), and confirmed DA Form 2062 in PDFs."
+        description="Source hand receipts, electronic Sub-hand receipts (SHR), and confirmed DA Form 2062 PDFs."
         actions={
-          <Button asChild>
-            <Link href="/receipts/2062-in">
-              <UploadCloud />
-              Import DA 2062 in
-            </Link>
-          </Button>
+          <div className="split-actions">
+            <Button asChild variant="outline">
+              <Link href="/receipts/2062-in">
+                <UploadCloud />
+                Import DA 2062 in
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link href="/receipts/2062-out">
+                <UploadCloud />
+                Sign out 2062
+              </Link>
+            </Button>
+          </div>
         }
       />
       <div className="receipt-list">
@@ -56,9 +64,12 @@ export default async function DocumentsPage() {
             </span>
             <div className="receipt-name">
               <h3>
-                <Link href={`/receipts/2062-in/history/${row.id}`}>{row.filename}</Link>
+                <Link href={row.direction === "out" ? `/receipts/2062-out/history/${row.id}` : `/receipts/2062-in/history/${row.id}`}>{row.filename}</Link>
               </h3>
-              <p>DA Form 2062 in · {row.parsePath}</p>
+              <p>
+                DA Form 2062 {row.direction === "out" ? "out" : "in"} · {row.parsePath}
+                {row.returnDate ? ` · return ${row.returnDate}` : ""}
+              </p>
             </div>
             <div>
               <small>Date</small>

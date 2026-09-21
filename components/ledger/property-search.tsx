@@ -24,6 +24,8 @@ export function PropertySearch({
         item.officialName ?? item.name,
         item.sectionLetter ?? "",
         item.shrHolderName ?? "",
+        item.signedOutTo ?? "",
+        item.returnDate ?? "",
       ]
         .join(" ")
         .toLowerCase();

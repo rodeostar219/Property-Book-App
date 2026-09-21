@@ -89,7 +89,7 @@ Never present local practice or app improvement as regulatory requirement.
 ## Sprint 2 terminology checklist (2062 in → out → 1750 → CHR)
 
 1. Confirm screen before any write (electronic **and** OCR).
-2. Success copy: add to signed-for / history — **not** “Accepted as current.”
+2. Success copy: add to signed-for / add temporary hand receipt / history — **not** “Accepted as current.”
 3. Out destinations (v1): person / section / organization only.
 4. 1750: packing layer; editable in-app before print/download.
 5. Companion banner / copy remains true on every flow.

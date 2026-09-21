@@ -92,6 +92,18 @@ export default async function LinePage({
               <dt>Location</dt>
               <dd>{item.location}</dd>
             </div>
+            {item.returnDate ? (
+              <div>
+                <dt>Return date</dt>
+                <dd>{item.returnDate}</dd>
+              </div>
+            ) : null}
+            {item.signedOutTo ? (
+              <div>
+                <dt>Signed out to</dt>
+                <dd>{item.signedOutTo}</dd>
+              </div>
+            ) : null}
             <div>
               <dt>Signed for</dt>
               <dd>{item.assignedToName ?? "not recorded"}</dd>

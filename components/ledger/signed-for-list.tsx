@@ -32,6 +32,7 @@ export function SignedForList({
                 <b>{item.commonName ?? item.name}</b>
                 <span>
                   {item.officialName ?? item.name} · {formatSerial(item.serial)}
+                  {item.returnDate ? ` · return ${item.returnDate}` : ""}
                 </span>
               </Link>
               <StatusChip item={item} />

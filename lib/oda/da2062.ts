@@ -9,6 +9,8 @@ import {
   SECTION_LETTERS,
   SECTION_META,
   type Da2062DestinationKind,
+  type Da2062Direction,
+  type Da2062OutDestinationKind,
   type Da2062ParsePath,
   type LineDisposition,
   type SectionLetter,
@@ -24,7 +26,29 @@ export const ADD_TO_SIGNED_FOR_LABEL = "Add to signed-for";
 export const DA2062_SUCCESS_IS_NOT_ACCEPT = true;
 export const DA2062_MAX_PDF_BYTES = 600_000;
 
-export type Da2062RejectReason = "wrong_section" | "cross_uic" | "section_isolation" | "unreadable";
+export type Da2062RejectReason =
+  | "wrong_section"
+  | "cross_uic"
+  | "section_isolation"
+  | "unreadable"
+  | "return_date_required"
+  | "wrong_destination"
+  | "wrong_direction";
+
+export type Da2062PdfContent = {
+  parsePath: Da2062ParsePath;
+  uic: string;
+  issuer: string;
+  toParty: string;
+  gainingSection: SectionLetter | null;
+  issuerSection: SectionLetter | null;
+  lines: Da2062InLine[];
+  warnings: string[];
+  returnDate: string | null;
+  direction: Da2062Direction | null;
+  outDestinationKind: Da2062OutDestinationKind | "invalid" | null;
+  outDestinationLabel: string | null;
+};
 
 export type Da2062InLine = {
   lin: string | null;
@@ -182,13 +206,40 @@ function classifyPath(fields: Record<string, string>, text: string): Da2062Parse
   return "ocr";
 }
 
-export function parseDa2062Pdf(
+export function normalizeReturnDate(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  const iso = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+  const us = trimmed.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
+  if (us) {
+    return `${us[3]}-${us[1].padStart(2, "0")}-${us[2].padStart(2, "0")}`;
+  }
+  return null;
+}
+
+function parseDirection(value: string | null): Da2062Direction | null {
+  if (!value) return null;
+  const token = value.toLowerCase();
+  if (/\bout(going)?\b|sign\s*out|temporary hand receipt/.test(token)) return "out";
+  if (/\bin(coming)?\b|sign\s*in/.test(token)) return "in";
+  return null;
+}
+
+function parseOutDestinationKind(
+  value: string | null,
+): Da2062OutDestinationKind | "invalid" | null {
+  if (!value) return null;
+  const token = value.toLowerCase().replace(/[_-]+/g, " ").trim();
+  if (["person", "soldier", "individual", "custodian"].includes(token)) return "person";
+  if (["section", "shr", "sub hand receipt", "sub-hand receipt"].includes(token)) return "section";
+  if (["organization", "org", "unit", "activity"].includes(token)) return "organization";
+  return "invalid";
+}
+
+export function extractDa2062Content(
   bytes: Uint8Array,
-  filename: string,
-  destination: { kind: Da2062DestinationKind; section: SectionLetter | null },
-):
-  | { ok: true; draft: Omit<Da2062InDraft, "sourcePdfBase64" | "sourcePdfContentType"> }
-  | Da2062ValidationFail {
+): { ok: true; content: Da2062PdfContent } | Da2062ValidationFail {
   const { text, fields } = extractPdfPayload(bytes);
   const haystack = `${text}\n${Object.entries(fields)
     .map(([k, v]) => `${k}=${v}`)
@@ -210,13 +261,21 @@ export function parseDa2062Pdf(
     pickField(fields, haystack, ["ISSUER", "FROM"]) ??
     pickField(fields, haystack, ["ISSUING ORGANIZATION"]) ??
     "";
-  const gainingParty =
-    pickField(fields, haystack, ["GAINING_PARTY", "TO", "GAINING PARTY"]) ?? "";
+  const toParty =
+    pickField(fields, haystack, [
+      "DESTINATION",
+      "TO",
+      "GAINING_PARTY",
+      "GAINING PARTY",
+      "RECEIVING",
+    ]) ?? "";
   const gainingSection = parseSectionToken(
-    pickField(fields, haystack, ["GAINING_SECTION", "SECTION", "GAINING SECTION"]) ??
-      gainingParty,
+    pickField(fields, haystack, ["GAINING_SECTION", "SECTION", "GAINING SECTION", "DESTINATION_SECTION"]) ??
+      toParty,
   );
-
+  const issuerSection = parseSectionToken(
+    pickField(fields, haystack, ["ISSUER_SECTION", "FROM_SECTION", "ISSUING SECTION"]) ?? issuer,
+  );
   const structured = parseStructuredLines(haystack, parsePath === "electronic" ? "high" : "degraded");
   const lines = structured.length > 0 ? structured : parseOcrLines(haystack);
   const warnings: string[] = [];
@@ -229,17 +288,55 @@ export function parseDa2062Pdf(
 
   return {
     ok: true,
-    draft: {
+    content: {
       parsePath,
-      filename,
       uic,
       issuer: issuer || "not recorded",
-      gainingParty: gainingParty || "not recorded",
+      toParty: toParty || "not recorded",
       gainingSection,
-      destinationKind: destination.kind,
-      destinationSection: destination.section,
+      issuerSection,
       lines,
       warnings,
+      returnDate: normalizeReturnDate(
+        pickField(fields, haystack, ["RETURN_DATE", "RETURN DATE", "DUE", "DUE_DATE", "RENEWAL_DUE"]),
+      ),
+      direction: parseDirection(pickField(fields, haystack, ["DIRECTION", "2062_DIRECTION"])),
+      outDestinationKind: parseOutDestinationKind(
+        pickField(fields, haystack, ["DESTINATION_KIND", "OUT_DESTINATION_KIND"]),
+      ),
+      outDestinationLabel: pickField(fields, haystack, [
+        "DESTINATION",
+        "DESTINATION_LABEL",
+        "TO",
+        "RECEIVING",
+      ]),
+    },
+  };
+}
+
+export function parseDa2062Pdf(
+  bytes: Uint8Array,
+  filename: string,
+  destination: { kind: Da2062DestinationKind; section: SectionLetter | null },
+):
+  | { ok: true; draft: Omit<Da2062InDraft, "sourcePdfBase64" | "sourcePdfContentType"> }
+  | Da2062ValidationFail {
+  const extracted = extractDa2062Content(bytes);
+  if (!extracted.ok) return extracted;
+  const { content } = extracted;
+  return {
+    ok: true,
+    draft: {
+      parsePath: content.parsePath,
+      filename,
+      uic: content.uic,
+      issuer: content.issuer,
+      gainingParty: content.toParty,
+      gainingSection: content.gainingSection,
+      destinationKind: destination.kind,
+      destinationSection: destination.section,
+      lines: content.lines,
+      warnings: content.warnings,
     },
   };
 }
@@ -418,7 +515,7 @@ export function signedForAdditionItem(line: AcceptedSignedForLine): PropertyItem
     nsn: line.nsn,
     name: line.officialName ?? line.nomenclature,
     officialName: line.officialName ?? line.nomenclature,
-    commonName: line.actualName,
+    commonName: line.actualName ?? undefined,
     serial: line.serial,
     quantityRequired: line.quantity,
     quantityOnHand: line.quantity,

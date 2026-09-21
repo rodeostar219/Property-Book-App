@@ -3,7 +3,7 @@
 Living soldier / section UX for Property-Book-App. Ben owns this page.
 
 **On `main`:** Sprint 1 section-first flows.  
-**Locked next:** Sprint 2 **2062 in** Confirm screen. Later Sprint 2 slices stay specified here but are not built yet.
+**Locked next:** Sprint 2 **2062 out** Confirm screen (temporary hand receipt). 2062 in Confirm is locked and building on PR #3.
 
 ---
 
@@ -65,7 +65,7 @@ Route: `/lines/[id]`
 
 ## Sprint 2 (in progress)
 
-### 2062 in (building) — Confirm screen (locked)
+### 2062 in (PR #3) — Confirm screen (locked)
 
 DA Form 2062 = Hand Receipt/Shortage Listing. Electronic extract and scanned/OCR share **one** Confirm screen.
 
@@ -82,11 +82,25 @@ DA Form 2062 = Hand Receipt/Shortage Listing. Electronic extract and scanned/OCR
 
 Rejects with **no rows**: wrong section, Echo targeting ODA HR, cross-UIC, D1 down.
 
-### 2062 out (next)
+### 2062 out (building) — Confirm screen (locked)
 
-- Destinations v1: **person / section / organization** only.
-- Return date is required.
-- Past due = **warn only**. ≤30-day temp HR = awareness warn, not a forced renewal.
+Temporary hand receipt / DA Form 2062 signed-out. Electronic extract and scanned/OCR share **one** Confirm screen.
+
+1. Upload electronic or scanned/OCR DA Form 2062 out.
+2. Always land on **Confirm**. Parse never auto-writes rows — even on a perfect parse.
+3. Confirm always shows:
+   - issuer
+   - destination (**person / section / organization** only)
+   - each line: Official + Actual if known + NSN + serial or **not recorded** (never `—`) + qty
+   - **return date** (required)
+   - parse warnings, including past due / ≤30-day awareness
+4. Per line: **accept** / **skip** / **flag discrepancy**.
+5. Primary CTA: **Add temporary hand receipt** (Sign out). **Cancel** leaves zero rows.
+6. Success → history + signed-out state with return date visible. Companion custody only — not Accept theater, not an APSR drop.
+
+Past due and ≤30-day temp HR = **warn only**. No force turn-in or convert.
+
+Rejects with **no rows**: wrong section, cross-UIC, destination outside person/section/organization, missing return date on write, D1 down.
 
 ### Box → editable DD 1750 (later in Sprint 2)
 

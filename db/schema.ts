@@ -216,6 +216,10 @@ export const da2062Imports = sqliteTable("da2062_imports", {
   lineCount: integer("line_count").notNull().default(0),
   discrepancyCount: integer("discrepancy_count").notNull().default(0),
   notes: text("notes"),
+  returnDate: text("return_date"),
+  outDestinationKind: text("out_destination_kind"),
+  outDestinationLabel: text("out_destination_label"),
+  issuerSection: text("issuer_section"),
 }, (t) => [
   uniqueIndex("idx_da2062_public").on(t.publicKey),
   index("idx_da2062_section_date").on(t.destinationSection, t.importedAt),
@@ -254,3 +258,21 @@ export const custodyInEvents = sqliteTable("custody_in_events", {
   recordedBy: text("recorded_by").notNull(),
   factLayer: text("fact_layer").notNull().default("responsibility"),
 }, (t) => [index("idx_custody_in_import").on(t.importId)]);
+
+export const custodyOutEvents = sqliteTable("custody_out_events", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  importId: integer("import_id").notNull().references(() => da2062Imports.id),
+  lineKey: text("line_key"),
+  nsn: text("nsn"),
+  serialNumber: text("serial_number"),
+  nomenclature: text("nomenclature").notNull(),
+  quantity: integer("quantity").notNull().default(1),
+  outDestinationKind: text("out_destination_kind").notNull(),
+  outDestinationLabel: text("out_destination_label").notNull(),
+  returnDate: text("return_date").notNull(),
+  issuer: text("issuer").notNull(),
+  issuerSection: text("issuer_section"),
+  occurredAt: text("occurred_at").notNull(),
+  recordedBy: text("recorded_by").notNull(),
+  factLayer: text("fact_layer").notNull().default("custody"),
+}, (t) => [index("idx_custody_out_import").on(t.importId)]);

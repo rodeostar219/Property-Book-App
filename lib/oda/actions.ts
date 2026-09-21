@@ -20,16 +20,35 @@ import {
   type Da2062EnrichedLine,
   type Da2062InDraft,
 } from "./da2062";
+import {
+  ADD_TEMPORARY_HAND_RECEIPT_LABEL,
+  defaultOutDispositions,
+  outDestinationLabelText,
+  parseDa2062OutPdf,
+  planDa2062OutConfirm,
+  previewDa2062OutConflicts,
+  validateDa2062Out,
+  type Da2062OutDraft,
+} from "./da2062-out";
 import { da2062Fixture, type Da2062FixtureName } from "./da2062-fixtures";
+import { da2062OutFixture, type Da2062OutFixtureName } from "./da2062-out-fixtures";
 import {
   ensureOdaStore,
   listPictureBooks,
   readAccountabilitySnapshot,
   writeDa2062In,
+  writeDa2062Out,
   writeInject,
   writePictureBook,
 } from "./store";
-import type { Da2062DestinationKind, ElectronicShrLine, LineDisposition, SectionLetter, SourceConflict } from "./types";
+import type {
+  Da2062DestinationKind,
+  Da2062OutDestinationKind,
+  ElectronicShrLine,
+  LineDisposition,
+  SectionLetter,
+  SourceConflict,
+} from "./types";
 
 export type ActionResult =
   | { ok: true; message: string; injectId?: number; importId?: number }
@@ -40,6 +59,17 @@ export type ParseDa2062Result =
       ok: true;
       message: string;
       draft: Da2062InDraft;
+      enriched: Da2062EnrichedLine[];
+      conflicts: SourceConflict[];
+      defaultDispositions: LineDisposition[];
+    }
+  | { ok: false; message: string; reason?: string };
+
+export type ParseDa2062OutResult =
+  | {
+      ok: true;
+      message: string;
+      draft: Da2062OutDraft;
       enriched: Da2062EnrichedLine[];
       conflicts: SourceConflict[];
       defaultDispositions: LineDisposition[];
@@ -337,5 +367,149 @@ export async function confirmDa2062In(
     ok: true,
     importId: result.importId,
     message: `${ADD_TO_SIGNED_FOR_LABEL}: ${result.acceptedCount} line${result.acceptedCount === 1 ? "" : "s"} added to ${destinationLabel(draft.destinationKind, draft.destinationSection)}. History #${result.importId} asserted in D1. ${result.discrepancyKeys.length} discrepancy${result.discrepancyKeys.length === 1 ? "" : "ies"} opened. Not Accept theater.`,
+  };
+}
+
+function readOutDestination(formData: FormData): {
+  section: SectionLetter | null;
+  kind: Da2062OutDestinationKind;
+  label: string;
+  destinationSection: SectionLetter | null;
+  returnDate: string | null;
+} {
+  const kindRaw = String(formData.get("outDestinationKind") ?? "person");
+  const kind: Da2062OutDestinationKind =
+    kindRaw === "section" || kindRaw === "organization" ? kindRaw : "person";
+  const sectionRaw = String(formData.get("issuerSection") ?? "").toUpperCase();
+  const destSectionRaw = String(formData.get("destinationSection") ?? "").toUpperCase();
+  const section = (["B", "C", "D", "E", "F"] as const).includes(sectionRaw as SectionLetter)
+    ? (sectionRaw as SectionLetter)
+    : null;
+  const destinationSection = (["B", "C", "D", "E", "F"] as const).includes(
+    destSectionRaw as SectionLetter,
+  )
+    ? (destSectionRaw as SectionLetter)
+    : null;
+  return {
+    section,
+    kind,
+    label: String(formData.get("outDestinationLabel") ?? "").trim(),
+    destinationSection: kind === "section" ? destinationSection : null,
+    returnDate: String(formData.get("returnDate") ?? "").trim() || null,
+  };
+}
+
+async function pdfFromOutForm(formData: FormData): Promise<
+  | { ok: true; filename: string; bytes: Uint8Array }
+  | { ok: false; message: string }
+> {
+  const fixtureName = String(formData.get("fixture") ?? "").trim();
+  if (fixtureName) {
+    try {
+      const fixture = da2062OutFixture(fixtureName as Da2062OutFixtureName);
+      return { ok: true, filename: fixture.filename, bytes: fixture.bytes };
+    } catch {
+      return { ok: false, message: "Unknown DA Form 2062 out fixture. Nothing was written." };
+    }
+  }
+  return pdfFromForm(formData);
+}
+
+export async function parseDa2062Out(formData: FormData): Promise<ParseDa2062OutResult> {
+  const actor = await getActor();
+  const destination = readOutDestination(formData);
+  const pdf = await pdfFromOutForm(formData);
+  if (!pdf.ok) return pdf;
+  const parsed = parseDa2062OutPdf(pdf.bytes, pdf.filename, destination);
+  if (!parsed.ok) return { ok: false, message: parsed.message, reason: parsed.reason };
+  const check = validateDa2062Out({
+    actor,
+    issuerSection: destination.section ?? parsed.draft.issuerSection,
+    draft: parsed.draft,
+    requireReturnDate: false,
+  });
+  if (!check.ok) return { ok: false, message: check.message, reason: check.reason };
+
+  const pictures = (await ensureOdaStore()) === "d1" ? await listPictureBooks() : [];
+  const draft: Da2062OutDraft = {
+    ...parsed.draft,
+    sourcePdfBase64: bytesToBase64(pdf.bytes),
+    sourcePdfContentType: "application/pdf",
+  };
+  const enriched = enrichDa2062Lines(draft.lines, pictures);
+  const conflicts = previewDa2062OutConflicts(draft);
+  return {
+    ok: true,
+    message:
+      "Parsed for Confirm. Nothing was written. Temporary hand receipt is not an APSR drop. Confirm is required even when the parse is perfect.",
+    draft,
+    enriched,
+    conflicts,
+    defaultDispositions: defaultOutDispositions(enriched, conflicts),
+  };
+}
+
+export async function confirmDa2062Out(
+  draftJson: string,
+  dispositionsJson: string,
+): Promise<ActionResult> {
+  const blocked = await requireD1();
+  if (blocked) return blocked;
+  const actor = await getActor();
+  let draft: Da2062OutDraft;
+  let dispositions: LineDisposition[];
+  try {
+    draft = JSON.parse(draftJson) as Da2062OutDraft;
+    dispositions = JSON.parse(dispositionsJson) as LineDisposition[];
+  } catch {
+    return fail("Confirm payload is not valid JSON. Nothing was written.");
+  }
+  if (!draft?.lines?.length || !draft.uic) {
+    return fail("Confirm payload is incomplete. Nothing was written.");
+  }
+  if (!Array.isArray(dispositions) || dispositions.length !== draft.lines.length) {
+    return fail("Per-line accept / skip / flag is required. Nothing was written.");
+  }
+  const check = validateDa2062Out({
+    actor,
+    issuerSection: draft.issuerSection,
+    draft,
+    requireReturnDate: true,
+  });
+  if (!check.ok) return fail(check.message);
+
+  const plan = planDa2062OutConfirm({
+    lines: draft.lines,
+    dispositions,
+    conflicts: previewDa2062OutConflicts(draft),
+    issuerSection: draft.issuerSection,
+    returnDate: draft.returnDate,
+  });
+  if (!plan.canCommit) {
+    return fail(
+      plan.willWrite
+        ? "Return date is required. Nothing was written."
+        : "Cancel / all lines skipped. No rows written.",
+    );
+  }
+
+  const result = await writeDa2062Out({ draft, dispositions, actorName: actor.fullName });
+  revalidatePath("/receipts/2062-out");
+  revalidatePath(`/receipts/2062-out/history/${result.importId}`);
+  revalidatePath("/exceptions");
+  revalidatePath("/receipts");
+  revalidatePath("/documents");
+  revalidatePath("/loans");
+  revalidatePath("/");
+  if (draft.issuerSection) revalidatePath(`/sections/${draft.issuerSection}`);
+  revalidatePath("/my-property");
+  return {
+    ok: true,
+    importId: result.importId,
+    message: `${ADD_TEMPORARY_HAND_RECEIPT_LABEL}: ${result.acceptedCount} line${result.acceptedCount === 1 ? "" : "s"} signed out to ${outDestinationLabelText({
+      kind: draft.outDestinationKind,
+      label: draft.outDestinationLabel,
+      section: draft.destinationSection,
+    })}. Return ${draft.returnDate}. History #${result.importId} asserted in D1. ${result.discrepancyKeys.length} discrepancy${result.discrepancyKeys.length === 1 ? "" : "ies"} opened. Not Accept theater. Not an APSR drop.`,
   };
 }

@@ -31,11 +31,12 @@ export default async function LoansPage() {
                 Incoming 2062
               </Link>
             </Button>
-            <DisabledAction
-              label="Outgoing 2062"
-              reason={NOT_WIRED.da2062Out}
-              icon={<UploadCloud />}
-            />
+            <Button asChild>
+              <Link href="/receipts/2062-out">
+                <UploadCloud />
+                Sign out 2062
+              </Link>
+            </Button>
           </div>
         }
       />

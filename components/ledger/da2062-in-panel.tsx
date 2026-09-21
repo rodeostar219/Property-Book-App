@@ -2,7 +2,8 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowDownToLine, FileScan, UploadCloud } from "lucide-react";
+import Link from "next/link";
+import { ArrowDownToLine, ArrowUpFromLine, FileScan, UploadCloud } from "lucide-react";
 import { ActionResultNote } from "@/components/ledger/action-result";
 import { DisabledAction } from "@/components/ledger/disabled-action";
 import { Button } from "@/components/ui/button";
@@ -201,7 +202,12 @@ export function Da2062InPanel({ actor, persistence, defaultKind, defaultSection 
               {fixture.label}
             </Button>
           ))}
-          <DisabledAction label="2062 out" reason={NOT_WIRED.da2062Out} variant="outline" />
+          <Button asChild variant="outline">
+            <Link href="/receipts/2062-out">
+              <ArrowUpFromLine />
+              2062 out
+            </Link>
+          </Button>
         </div>
         <p className="inject-hint">
           Upload → parse → Confirm. Never auto-write. Wrong section or cross-UIC denies with no rows.

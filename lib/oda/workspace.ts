@@ -15,6 +15,7 @@ import { canViewSection, visibleSectionLetters } from "./access";
 import { ODA, sectionShrLabel, sectionTitle } from "./org";
 import { asPhotoSrc, stencilDataUri } from "./picture-book";
 import { mergeSignedForAdditions, signedForMatchKey } from "./da2062";
+import { applySignedOutState } from "./da2062-out";
 import {
   ensureOdaStore,
   getDa2062Import,
@@ -24,9 +25,11 @@ import {
   listDiscrepancies,
   listInjects,
   listPictureBooks,
+  listSignedOutLines,
   type Da2062ImportLineRecord,
   type Da2062ImportRecord,
   type CustodyInRecord,
+  type CustodyOutRecord,
   type DiscrepancyRecord,
   type InjectLineRecord,
   type InjectRecord,
@@ -96,9 +99,12 @@ function applyPicture(item: PropertyItem, pictures: PictureBookRow[]): LayeredLi
       packing: packing
         ? `${packing.documentLabel} · qty ${packing.quantity}`
         : "No DD Form 1750 fact on this line",
-      custody: item.assignedToName
-        ? `Signed for by ${item.assignedToName} · ${item.location}`
-        : `On hand · ${item.location}`,
+      custody:
+        item.status === "signed_out"
+          ? `Signed out (temporary hand receipt) to ${item.signedOutTo ?? item.location}${item.returnDate ? ` · return ${item.returnDate}` : ""}`
+          : item.assignedToName
+            ? `Signed for by ${item.assignedToName} · ${item.location}`
+            : `On hand · ${item.location}`,
       visualId: `Official: ${picture?.officialName ?? item.officialName ?? item.name} · Actual: ${picture?.commonName ?? item.commonName ?? "not recorded"}`,
     },
     packingNote: packing ? `${packing.documentLabel} qty ${packing.quantity}` : null,
@@ -144,7 +150,16 @@ export async function loadWorkspace(actor: Actor): Promise<Workspace> {
             : Boolean(line.destinationSection && canViewSection(actor, line.destinationSection)),
         )
       : [];
-  const items = mergeSignedForAdditions(catalogItems, acceptedAdditions);
+  const signedOut =
+    persistence === "d1"
+      ? (await listSignedOutLines()).filter((line) =>
+          line.issuerSection ? canViewSection(actor, line.issuerSection) : isOdaVisible(actor),
+        )
+      : [];
+  const items = applySignedOutState(
+    mergeSignedForAdditions(catalogItems, acceptedAdditions),
+    signedOut,
+  ).map((item) => applyPicture(item, pictures));
 
   const discrepancies = await listDiscrepancies();
   const exceptions = discrepancies
@@ -187,6 +202,10 @@ export async function loadWorkspace(actor: Actor): Promise<Workspace> {
 }
 
 function canSeeDa2062Import(actor: Actor, row: Da2062ImportRecord): boolean {
+  if (row.direction === "out") {
+    if (row.issuerSection) return canViewSection(actor, row.issuerSection);
+    return isOdaVisible(actor);
+  }
   if (row.destinationKind === "oda_hr") return isOdaVisible(actor);
   if (row.destinationSection) return canViewSection(actor, row.destinationSection);
   return isOdaVisible(actor);
@@ -254,6 +273,7 @@ export async function loadDa2062Detail(actor: Actor, id: number): Promise<{
   record: Da2062ImportRecord;
   lines: Da2062ImportLineRecord[];
   events: CustodyInRecord[];
+  outEvents: CustodyOutRecord[];
   sourcePdfData: string | null;
   sourcePdfContentType: string | null;
 } | null> {

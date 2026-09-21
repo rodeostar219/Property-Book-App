@@ -89,7 +89,7 @@ Never present local practice or app improvement as regulatory requirement.
 ## Sprint 2 terminology checklist (2062 in → out → 1750 → CHR)
 
 1. Confirm screen before any write (electronic **and** OCR).
-2. Success copy: add to signed-for / history — **not** “Accepted as current.”
+2. Success copy: add to signed-for / add temporary hand receipt / history — **not** “Accepted as current.”
 3. Out destinations (v1): person / section / organization only.
 4. 1750: packing layer; editable in-app before print/download.
 5. Companion banner / copy remains true on every flow.
@@ -106,5 +106,3 @@ Never present local practice or app improvement as regulatory requirement.
 | **DD Form 1750** | Packing List (ACTIVE) |
 
 Paragraph-level Accept/CHR ceremony is **backlog risk**, not a Sprint 1/2 ship gate unless Ryan reopens it.
-
-Mirrored from [`docs/TERMINOLOGY.md`](https://github.com/rodeostar219/Property-Book-App/blob/main/docs/TERMINOLOGY.md) on `main`.

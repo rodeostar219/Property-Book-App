@@ -33,6 +33,9 @@ export function PmHome({
             <Link className="snapshot-link" href="/receipts/2062-in">
               <ScrollText /> DA Form 2062 in
             </Link>
+            <Link className="snapshot-link" href="/receipts/2062-out">
+              <ScrollText /> DA Form 2062 out
+            </Link>
             <CurrentBadge>Hand receipt current</CurrentBadge>
           </div>
         }

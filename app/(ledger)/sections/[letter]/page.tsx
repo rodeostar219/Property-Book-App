@@ -48,7 +48,9 @@ export default async function SectionPage({
   const query = await searchParams;
   const historyId = query.history ? Number(query.history) : null;
   const addedFrom2062 = query.from === "2062" && Number.isFinite(historyId);
+  const addedFrom2062Out = query.from === "2062-out" && Number.isFinite(historyId);
   const items = workspace.items.filter((item) => item.sectionLetter === letter);
+  const signedOut = items.filter((item) => item.status === "signed_out");
   const card = workspace.sections.find((section) => section.letter === letter);
 
   return (
@@ -65,14 +67,30 @@ export default async function SectionPage({
           </small>
         </aside>
       ) : null}
+      {addedFrom2062Out ? (
+        <aside className="companion-banner">
+          <p>
+            Temporary hand receipt written. Signed-out state and return date are on this section list.
+            History written. Not Accept theater. Not an APSR drop.
+          </p>
+          <small>
+            <Link href={`/receipts/2062-out/history/${historyId}`}>Open 2062 out history #{historyId}</Link>
+          </small>
+        </aside>
+      ) : null}
       <PageHeader
         title={sectionTitle(letter)}
         description={`Section Sub-hand receipt (SHR) under the ${ODA.name} hand receipt. PHRH remains ${ODA.phrhName}.`}
         meta={`${items.length} visible line${items.length === 1 ? "" : "s"} · holder ${card?.holderName ?? "unassigned"}`}
         actions={
-          <Button asChild variant="outline">
-            <Link href={`/receipts/2062-in?section=${letter}`}>Import DA 2062 in</Link>
-          </Button>
+          <div className="split-actions">
+            <Button asChild variant="outline">
+              <Link href={`/receipts/2062-in?section=${letter}`}>Import DA 2062 in</Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href={`/receipts/2062-out?section=${letter}`}>Sign out 2062</Link>
+            </Button>
+          </div>
         }
       />
       <SectionSwitcher sections={workspace.sections} active={letter} />
@@ -88,6 +106,29 @@ export default async function SectionPage({
         persistence={workspace.persistence}
         canEdit={canViewSection(actor, letter)}
       />
+      {signedOut.length > 0 ? (
+        <section className="panel">
+          <div className="panel-head">
+            <div>
+              <h2>Signed out · temporary hand receipts</h2>
+              <p>Return date is required and visible. Past due is warn only — not a forced turn-in.</p>
+            </div>
+          </div>
+          <ul className="home-item-list">
+            {signedOut.map((item) => (
+              <li key={item.id}>
+                <Link href={item.detailHref ?? `/lines/${item.id}`}>
+                  <b>{item.commonName ?? item.name}</b>
+                  <span>
+                    {item.signedOutTo ?? item.location} · return {item.returnDate ?? "not recorded"} ·{" "}
+                    {item.serial ?? "not recorded"}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
       <PropertySearch
         items={items}
         empty="No accountability lines on this section Sub-hand receipt (SHR)."

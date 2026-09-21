@@ -7,6 +7,7 @@ import {
   Images,
   Package,
   ScrollText,
+  UploadCloud,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -25,6 +26,7 @@ export const soldierNav: NavItem[] = [
   { href: "/my-property", label: "My section", icon: Package },
   { href: "/sections", label: "ODA sections", icon: Users },
   { href: "/receipts/2062-in", label: "2062 in", icon: ScrollText },
+  { href: "/receipts/2062-out", label: "2062 out", icon: UploadCloud },
   { href: "/exceptions", label: "Exceptions", icon: AlertTriangle, badgeKey: "exceptions" },
 ];
 
@@ -52,6 +54,7 @@ export function pageTitleForPath(pathname: string): string {
     "/receipts": "Hand receipts",
     "/loans": "DA Form 2062",
     "/receipts/2062-in": "DA Form 2062 in",
+    "/receipts/2062-out": "DA Form 2062 out",
     "/exceptions": "Exceptions",
     "/documents": "Documents",
   };
@@ -60,6 +63,7 @@ export function pageTitleForPath(pathname: string): string {
   if (pathname.startsWith("/exceptions/")) return "Discrepancy";
   if (pathname.startsWith("/sections/")) return "Section Sub-hand receipt";
   if (pathname.startsWith("/receipts/2062-in/history")) return "2062 in history";
+  if (pathname.startsWith("/receipts/2062-out/history")) return "2062 out history";
   if (pathname.startsWith("/receipts/history")) return "SHR inject history";
   return "ODA Property Workspace";
 }

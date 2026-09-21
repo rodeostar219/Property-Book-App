@@ -158,7 +158,11 @@ CREATE TABLE IF NOT EXISTS da2062_imports (
   prior_import_id integer,
   line_count integer DEFAULT 0 NOT NULL,
   discrepancy_count integer DEFAULT 0 NOT NULL,
-  notes text
+  notes text,
+  return_date text,
+  out_destination_kind text,
+  out_destination_label text,
+  issuer_section text
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_da2062_public ON da2062_imports (public_key);
 CREATE INDEX IF NOT EXISTS idx_da2062_section_date ON da2062_imports (destination_section, imported_at);
@@ -198,4 +202,23 @@ CREATE TABLE IF NOT EXISTS custody_in_events (
   FOREIGN KEY (import_id) REFERENCES da2062_imports(id)
 );
 CREATE INDEX IF NOT EXISTS idx_custody_in_import ON custody_in_events (import_id);
+CREATE TABLE IF NOT EXISTS custody_out_events (
+  id integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+  import_id integer NOT NULL,
+  line_key text,
+  nsn text,
+  serial_number text,
+  nomenclature text NOT NULL,
+  quantity integer DEFAULT 1 NOT NULL,
+  out_destination_kind text NOT NULL,
+  out_destination_label text NOT NULL,
+  return_date text NOT NULL,
+  issuer text NOT NULL,
+  issuer_section text,
+  occurred_at text NOT NULL,
+  recorded_by text NOT NULL,
+  fact_layer text DEFAULT 'custody' NOT NULL,
+  FOREIGN KEY (import_id) REFERENCES da2062_imports(id)
+);
+CREATE INDEX IF NOT EXISTS idx_custody_out_import ON custody_out_events (import_id);
 `.trim();

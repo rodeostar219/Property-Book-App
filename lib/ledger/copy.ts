@@ -26,6 +26,10 @@ export const DA_2062_IN_TITLE = "DA Form 2062 in";
 export const DA_2062_IN_NOTE =
   "Scan / import IN only. Confirm before write. Success adds to signed-for plus history — not Accept theater. Companion to GCSS-Army / APSR — a PDF does not invent formal APSR accountability.";
 export const ADD_TO_SIGNED_FOR = "Add to signed-for";
+export const DA_2062_OUT_TITLE = "DA Form 2062 out";
+export const DA_2062_OUT_NOTE =
+  "Temporary hand receipt / signed-out. Destinations v1: person, section, or organization. Return date required. Past due and ≤30 days are warn only — no force turn-in. Confirm before write. Companion to GCSS-Army / APSR — not Accept theater, not an APSR drop.";
+export const ADD_TEMPORARY_HAND_RECEIPT = "Add temporary hand receipt";
 
 export const COMPANION_NOTE = COMPANION_DISCLAIMER;
 export const INJECT_FEED_LABEL = INJECT_LABEL;
@@ -40,10 +44,10 @@ export const NOT_WIRED = {
   location: "Location changes are not persisted in Sprint 1.",
   export: "Export is not wired — no file is generated.",
   addProperty: "Adding property is not persisted in Sprint 1.",
-  importDocument: "DA Form 2062 out, boxes, and DD Form 1750 generate stay out of this slice.",
-  importComponents: "COEI / BII / AAL / component CHR import is out of this 2062-in slice.",
-  da2062Out: "DA Form 2062 out is the next slice. Return dates stay out of this PR.",
-  da2062Boxes: "Boxes and DD Form 1750 generate stay out of this 2062-in slice.",
+  importDocument: "Boxes and DD Form 1750 generate stay out of this slice.",
+  importComponents: "COEI / BII / AAL / component CHR import is out of this 2062-out slice.",
+  da2062Out: "DA Form 2062 out is this slice — use the 2062 out path.",
+  da2062Boxes: "Boxes and DD Form 1750 generate stay out of this 2062-out slice.",
   addNote: "Notes are not persisted in Sprint 1.",
   d1Down: "D1 is unavailable. This mutation is disabled so the UI cannot fake a commit.",
   sectionLocked:
@@ -60,6 +64,7 @@ export const STATUS_LABEL: Record<
   string
 > = {
   signed_for: "Signed for / On hand receipt",
+  signed_out: "Signed out · temporary hand receipt",
   on_hand: "On hand",
   needs_serial_check: "Needs serial check",
   shortage_recorded: "Shortage recorded",
