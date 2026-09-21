@@ -12,8 +12,8 @@ import {
   parseDa2062In,
   type ActionResult,
   type ParseDa2062Result,
-} from "@/lib/oda/actions";
-import { destinationLabel, gainingPartyLabel, planDa2062Confirm } from "@/lib/oda/da2062";
+} from "@/lib/oda/da2062-actions";
+import { destinationLabel, gainingPartyLabel, planDa2062Confirm } from "@/lib/oda/da2062-confirm";
 import { identityKey } from "@/lib/oda/identity-key";
 import type { Da2062FixtureName } from "@/lib/oda/da2062-fixtures";
 import type { PersistenceMode } from "@/lib/oda/store";

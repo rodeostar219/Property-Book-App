@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getChatGPTUser, type ChatGPTUser } from "@/app/chatgpt-auth";
-import { PEOPLE } from "@/lib/oda/catalog";
+import { PEOPLE } from "@/lib/oda/people";
 import { DEMO_IDENTITY_COOKIE, DEMO_ROLE_COOKIE } from "./constants";
 import type { Actor, AppRole, DemoIdentity } from "./types";
 

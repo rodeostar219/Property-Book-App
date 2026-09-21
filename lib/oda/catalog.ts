@@ -1,5 +1,5 @@
 import { ODA, sectionShrLabel } from "./org";
-import { stencilDataUri } from "./picture-book";
+import { PEOPLE, personById } from "./people";
 import type { ElectronicShrLine, SectionLetter, SourceConflict } from "./types";
 import type {
   AccountabilityClass,
@@ -9,17 +9,8 @@ import type {
   PropertyItem,
 } from "@/lib/ledger/types";
 
-export type CatalogPerson = {
-  id: string;
-  displayName: string;
-  fullName: string;
-  initials: string;
-  grade: string;
-  mos: string;
-  email: string;
-  sectionLetter: SectionLetter | null;
-  identity: "echo" | "bravo" | "pm" | "other";
-};
+export type { CatalogPerson } from "./people";
+export { PEOPLE, personById } from "./people";
 
 export type CatalogLine = {
   key: string;
@@ -56,86 +47,6 @@ export type CatalogPackingLine = {
   quantity: number;
   documentLabel: string;
   sectionLetter: SectionLetter;
-};
-
-export const PEOPLE: Record<string, CatalogPerson> = {
-  ryan: {
-    id: "echo-ryan",
-    displayName: "R. Cole",
-    fullName: "SSG Ryan Cole",
-    initials: "RC",
-    grade: "SSG",
-    mos: "18E",
-    email: "r.cole@sfg.mil",
-    sectionLetter: "E",
-    identity: "echo",
-  },
-  vargas: {
-    id: "bravo-vargas",
-    displayName: "M. Vargas",
-    fullName: "SGT M. Vargas",
-    initials: "MV",
-    grade: "SGT",
-    mos: "18B",
-    email: "m.vargas@sfg.mil",
-    sectionLetter: "B",
-    identity: "bravo",
-  },
-  nguyen: {
-    id: "charlie-nguyen",
-    displayName: "C. Nguyen",
-    fullName: "SGT C. Nguyen",
-    initials: "CN",
-    grade: "SGT",
-    mos: "18C",
-    email: "c.nguyen@sfg.mil",
-    sectionLetter: "C",
-    identity: "other",
-  },
-  okonkwo: {
-    id: "delta-okonkwo",
-    displayName: "D. Okonkwo",
-    fullName: "SGT D. Okonkwo",
-    initials: "DO",
-    grade: "SGT",
-    mos: "18D",
-    email: "d.okonkwo@sfg.mil",
-    sectionLetter: "D",
-    identity: "other",
-  },
-  alvarez: {
-    id: "fox-alvarez",
-    displayName: "F. Alvarez",
-    fullName: "SGT F. Alvarez",
-    initials: "FA",
-    grade: "SGT",
-    mos: "18F",
-    email: "f.alvarez@sfg.mil",
-    sectionLetter: "F",
-    identity: "other",
-  },
-  ortiz: {
-    id: "pm-ortiz",
-    displayName: "R. Ortiz",
-    fullName: "SFC R. Ortiz",
-    initials: "RO",
-    grade: "SFC",
-    mos: "92Y",
-    email: "r.ortiz@sfg.mil",
-    sectionLetter: null,
-    identity: "pm",
-  },
-  reyes: {
-    id: "oda-reyes",
-    displayName: "A. Reyes",
-    fullName: "CPT A. Reyes",
-    initials: "AR",
-    grade: "CPT",
-    mos: "18A",
-    email: "a.reyes@sfg.mil",
-    sectionLetter: null,
-    identity: "other",
-  },
 };
 
 export const ACCOUNTABILITY_LINES: CatalogLine[] = [
@@ -558,10 +469,6 @@ export const SEED_CONFLICTS: SourceConflict[] = [
   },
 ];
 
-export function personById(id: string): CatalogPerson | undefined {
-  return Object.values(PEOPLE).find((person) => person.id === id);
-}
-
 export function lineByKey(key: string): CatalogLine | undefined {
   return ACCOUNTABILITY_LINES.find((line) => line.key === key);
 }
@@ -625,7 +532,7 @@ export function toPropertyItem(line: CatalogLine): PropertyItem {
     shrDocument: sectionShrLabel(line.sectionLetter),
     sectionLetter: line.sectionLetter,
     components: line.components,
-    photoData: stencilDataUri(line.commonName, line.officialName),
+    photoData: null,
   };
 }
 

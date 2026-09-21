@@ -1,4 +1,4 @@
-import { PEOPLE } from "./catalog";
+import { PEOPLE } from "./people";
 import { buildMinimalPdf } from "./da2062-pdf";
 import { ODA } from "./org";
 
