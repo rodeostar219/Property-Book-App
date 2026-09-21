@@ -9,11 +9,13 @@ import {
   defaultDispositionForLine,
   enrichDa2062Lines,
   gainingPartyLabel,
+  mergeSignedForAdditions,
   parseDa2062Pdf,
   planDa2062Confirm,
   previewDa2062Conflicts,
   validateDa2062InDestination,
 } from "./da2062";
+import { CATALOG_ITEMS } from "./catalog";
 import { da2062Fixture } from "./da2062-fixtures";
 import { extractPdfPayload } from "./da2062-pdf";
 import { formatSerial } from "@/lib/ledger/copy";
@@ -231,6 +233,39 @@ describe("DA Form 2062 in", () => {
       }),
       "Echo (E) · SSG Ryan Cole",
     );
+  });
+
+  it("adds accepted 2062 lines to signed-for without duplicating catalog identities", () => {
+    const parsed = parseDa2062Pdf(
+      da2062Fixture("electronic-echo").bytes,
+      "electronic.pdf",
+      { kind: "section_shr", section: "E" },
+    );
+    assert.equal(parsed.ok, true);
+    if (!parsed.ok) return;
+    const echoItems = CATALOG_ITEMS.filter((item) => item.sectionLetter === "E");
+    const additions = parsed.draft.lines.map((line) => ({
+      importId: 7,
+      nsn: line.nsn,
+      serial: line.serial,
+      lin: line.lin,
+      nomenclature: line.nomenclature,
+      officialName: line.nomenclature,
+      actualName: null,
+      photoData: null,
+      quantity: line.quantity,
+      destinationKind: "section_shr" as const,
+      destinationSection: "E" as const,
+      gainingParty: "SSG Ryan Cole",
+    }));
+    const merged = mergeSignedForAdditions(echoItems, additions);
+    const radio = merged.find((item) => item.serial === "15800421");
+    assert.ok(radio);
+    assert.equal(radio?.detailHref, "/receipts/2062-in/history/7");
+    assert.match(radio?.sourceReceipt ?? "", /companion signed-for/);
+    const iridiumMatches = merged.filter((item) => item.serial === "300415040404300");
+    assert.equal(iridiumMatches.length, 1);
+    assert.ok(merged.length > echoItems.length);
   });
 
   it("extracts AcroForm fields from the electronic fixture PDF", () => {

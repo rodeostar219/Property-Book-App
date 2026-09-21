@@ -39,6 +39,7 @@ import {
   enrichDa2062Lines,
   planDa2062Confirm,
   previewDa2062Conflicts,
+  type AcceptedSignedForLine,
   type Da2062InDraft,
 } from "./da2062";
 import {
@@ -698,6 +699,45 @@ export async function listDa2062Imports(): Promise<Da2062ImportRecord[]> {
   const db = getDb();
   const rows = await db.select().from(da2062Imports).orderBy(desc(da2062Imports.id));
   return rows.map(toDa2062ImportRecord);
+}
+
+export async function listAcceptedDa2062Lines(): Promise<AcceptedSignedForLine[]> {
+  if ((await ensureOdaStore()) !== "d1") return [];
+  const db = getDb();
+  const rows = await db
+    .select({
+      importId: da2062Imports.id,
+      destinationKind: da2062Imports.destinationKind,
+      destinationSection: da2062Imports.destinationSection,
+      gainingParty: da2062Imports.gainingParty,
+      lin: da2062ImportLines.lin,
+      nsn: da2062ImportLines.nsn,
+      serial: da2062ImportLines.serialNumber,
+      nomenclature: da2062ImportLines.nomenclature,
+      officialName: da2062ImportLines.officialName,
+      actualName: da2062ImportLines.actualName,
+      photoData: da2062ImportLines.photoData,
+      quantity: da2062ImportLines.quantity,
+    })
+    .from(da2062ImportLines)
+    .innerJoin(da2062Imports, eq(da2062ImportLines.importId, da2062Imports.id))
+    .where(eq(da2062ImportLines.disposition, "accept"));
+  return rows
+    .filter((row) => Boolean(row.nsn))
+    .map((row) => ({
+      importId: row.importId,
+      nsn: row.nsn ?? "",
+      serial: row.serial,
+      lin: row.lin,
+      nomenclature: row.nomenclature,
+      officialName: row.officialName,
+      actualName: row.actualName,
+      photoData: row.photoData,
+      quantity: row.quantity,
+      destinationKind: row.destinationKind === "oda_hr" ? "oda_hr" : "section_shr",
+      destinationSection: (row.destinationSection as SectionLetter | null) ?? null,
+      gainingParty: row.gainingParty,
+    }));
 }
 
 export async function getDa2062Import(id: number): Promise<{

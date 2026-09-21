@@ -73,6 +73,7 @@ export type PropertyItem = {
   sectionLetter?: SectionLetter;
   components: ComponentLine[];
   photoData?: string | null;
+  detailHref?: string;
 };
 
 export type LedgerException = {

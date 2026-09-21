@@ -14,10 +14,13 @@ import {
 import { canViewSection, visibleSectionLetters } from "./access";
 import { ODA, sectionShrLabel, sectionTitle } from "./org";
 import { asPhotoSrc, stencilDataUri } from "./picture-book";
+import { mergeSignedForAdditions } from "./da2062";
+import { identityKey } from "./identity-key";
 import {
   ensureOdaStore,
   getDa2062Import,
   getInject,
+  listAcceptedDa2062Lines,
   listDa2062Imports,
   listDiscrepancies,
   listInjects,
@@ -130,9 +133,19 @@ export async function loadWorkspace(actor: Actor): Promise<Workspace> {
   const persistence = await ensureOdaStore();
   const pictures = persistence === "d1" ? await listPictureBooks() : [];
   const letters = visibleSectionLetters(actor);
-  const items = CATALOG_ITEMS.filter((item) =>
+  const catalogItems = CATALOG_ITEMS.filter((item) =>
     item.sectionLetter ? letters.includes(item.sectionLetter) : isOdaVisible(actor),
   ).map((item) => applyPicture(item, pictures));
+
+  const acceptedAdditions =
+    persistence === "d1"
+      ? (await listAcceptedDa2062Lines()).filter((line) =>
+          line.destinationKind === "oda_hr"
+            ? isOdaVisible(actor)
+            : Boolean(line.destinationSection && canViewSection(actor, line.destinationSection)),
+        )
+      : [];
+  const items = mergeSignedForAdditions(catalogItems, acceptedAdditions);
 
   const discrepancies = await listDiscrepancies();
   const exceptions = discrepancies
@@ -160,7 +173,13 @@ export async function loadWorkspace(actor: Actor): Promise<Workspace> {
       mos: SECTION_META[letter].mos,
       specialty: SECTION_META[letter].specialty,
       holderName: holder?.fullName ?? "Unassigned",
-      lineCount: ACCOUNTABILITY_LINES.filter((line) => line.sectionLetter === letter).length,
+      lineCount:
+        ACCOUNTABILITY_LINES.filter((line) => line.sectionLetter === letter).length +
+        acceptedAdditions.filter(
+          (line) =>
+            line.destinationSection === letter &&
+            !ACCOUNTABILITY_LINES.some((row) => identityKey(row) === identityKey(line)),
+        ).length,
       visible: canViewSection(actor, letter),
     };
   });

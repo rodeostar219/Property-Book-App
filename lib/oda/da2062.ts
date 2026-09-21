@@ -1,7 +1,8 @@
+import type { PropertyItem } from "@/lib/ledger/types";
 import { ACCOUNTABILITY_LINES, PEOPLE, TRACKER_LINES } from "./catalog";
 import { detectSourceConflicts, type SourceFact } from "./discrepancy";
 import { identityKey } from "./identity-key";
-import { ODA } from "./org";
+import { ODA, sectionShrLabel } from "./org";
 import { asPhotoSrc, stencilDataUri } from "./picture-book";
 import type { PictureBookRow } from "./store";
 import {
@@ -391,6 +392,70 @@ export function planDa2062Confirm(input: {
     flaggedDiscrepancies,
     willWrite: accepted.length + flagged.length > 0,
   };
+}
+
+export type AcceptedSignedForLine = {
+  importId: number;
+  nsn: string;
+  serial: string | null;
+  lin: string | null;
+  nomenclature: string;
+  officialName: string | null;
+  actualName: string | null;
+  photoData: string | null;
+  quantity: number;
+  destinationKind: Da2062DestinationKind;
+  destinationSection: SectionLetter | null;
+  gainingParty: string;
+};
+
+export function signedForAdditionItem(line: AcceptedSignedForLine): PropertyItem {
+  const holder = line.destinationSection
+    ? Object.values(PEOPLE).find((person) => person.sectionLetter === line.destinationSection)
+    : PEOPLE.ortiz;
+  return {
+    id: `da2062-${line.importId}-${identityKey(line)}`,
+    nsn: line.nsn,
+    name: line.officialName ?? line.nomenclature,
+    officialName: line.officialName ?? line.nomenclature,
+    commonName: line.actualName,
+    serial: line.serial,
+    quantityRequired: line.quantity,
+    quantityOnHand: line.quantity,
+    accountabilityClass: "Accountable",
+    networkClassification: "Unclassified",
+    assignedToId: holder?.id ?? null,
+    assignedToName: holder?.fullName ?? line.gainingParty,
+    location: line.destinationSection
+      ? `${SECTION_META[line.destinationSection].name} section`
+      : `${ODA.name} hand receipt`,
+    status: "signed_for",
+    sourceReceipt: `DA Form 2062 in #${line.importId} · companion signed-for (not APSR)`,
+    phrhId: PEOPLE.reyes.id,
+    phrhName: ODA.phrhName,
+    shrHolderId: holder?.id,
+    shrHolderName: holder?.fullName ?? line.gainingParty,
+    shrDocument: line.destinationSection
+      ? sectionShrLabel(line.destinationSection)
+      : `${ODA.name} hand receipt`,
+    sectionLetter: line.destinationSection ?? undefined,
+    components: [],
+    photoData: line.photoData,
+    detailHref: `/receipts/2062-in/history/${line.importId}`,
+  };
+}
+
+export function mergeSignedForAdditions(
+  catalogItems: PropertyItem[],
+  additions: AcceptedSignedForLine[],
+): PropertyItem[] {
+  const existing = new Set(
+    catalogItems.map((item) => identityKey({ nsn: item.nsn, serial: item.serial })),
+  );
+  const extra = additions
+    .filter((line) => !existing.has(identityKey(line)))
+    .map(signedForAdditionItem);
+  return [...catalogItems, ...extra];
 }
 
 export function destinationLabel(

@@ -28,7 +28,7 @@ export function SignedForList({
         <ul className="home-item-list">
           {items.map((item) => (
             <li key={item.id}>
-              <Link href={`/lines/${item.id}`}>
+              <Link href={item.detailHref ?? `/lines/${item.id}`}>
                 <b>{item.commonName ?? item.name}</b>
                 <span>
                   {item.officialName ?? item.name} · {formatSerial(item.serial)}
