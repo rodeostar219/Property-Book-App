@@ -6,11 +6,13 @@ import { Da2062InPanel } from "@/components/ledger/da2062-in-panel";
 import { PageHeader } from "@/components/ledger/page-header";
 import { DA_2062_IN_NOTE, DA_2062_IN_TITLE } from "@/lib/ledger/copy";
 import { getActor } from "@/lib/ledger/identity";
+import { loadDa2062InShell } from "@/lib/oda/da2062-shell";
 import type { Da2062DestinationKind, SectionLetter } from "@/lib/oda/types";
 import { SECTION_LETTERS } from "@/lib/oda/types";
-import { loadWorkspace } from "@/lib/oda/workspace";
 
 export const dynamic = "force-dynamic";
+
+// GET must stay under Workers CPU/memory limits: no full catalog, PDF parse, or OCR.
 
 function isSectionLetter(value: string | undefined): value is SectionLetter {
   return Boolean(value && (SECTION_LETTERS as string[]).includes(value));
@@ -22,7 +24,7 @@ export default async function Da2062InPage({
   searchParams: Promise<{ section?: string; dest?: string }>;
 }) {
   const actor = await getActor();
-  const workspace = await loadWorkspace(actor);
+  const workspace = await loadDa2062InShell(actor);
   const query = await searchParams;
   const requested = query.section?.toUpperCase();
   const defaultSection = isSectionLetter(requested)

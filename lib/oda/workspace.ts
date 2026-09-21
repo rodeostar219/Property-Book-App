@@ -130,38 +130,36 @@ function toException(row: DiscrepancyRecord, actor: Actor): LedgerException | nu
 
 export async function loadWorkspace(actor: Actor): Promise<Workspace> {
   const persistence = await ensureOdaStore();
-  const pictures = persistence === "d1" ? await listPictureBooks() : [];
+  const [pictures, acceptedRaw, discrepancies, injectsRaw, da2062Raw] = await Promise.all([
+    persistence === "d1" ? listPictureBooks() : Promise.resolve([]),
+    persistence === "d1" ? listAcceptedDa2062Lines() : Promise.resolve([]),
+    listDiscrepancies(),
+    persistence === "d1" ? listInjects() : Promise.resolve(null),
+    persistence === "d1" ? listDa2062Imports() : Promise.resolve([]),
+  ]);
   const letters = visibleSectionLetters(actor);
   const catalogItems = CATALOG_ITEMS.filter((item) =>
     item.sectionLetter ? letters.includes(item.sectionLetter) : isOdaVisible(actor),
   ).map((item) => applyPicture(item, pictures));
 
-  const acceptedAdditions =
-    persistence === "d1"
-      ? (await listAcceptedDa2062Lines()).filter((line) =>
-          line.destinationKind === "oda_hr"
-            ? isOdaVisible(actor)
-            : Boolean(line.destinationSection && canViewSection(actor, line.destinationSection)),
-        )
-      : [];
+  const acceptedAdditions = acceptedRaw.filter((line) =>
+    line.destinationKind === "oda_hr"
+      ? isOdaVisible(actor)
+      : Boolean(line.destinationSection && canViewSection(actor, line.destinationSection)),
+  );
   const items = mergeSignedForAdditions(catalogItems, acceptedAdditions);
 
-  const discrepancies = await listDiscrepancies();
   const exceptions = discrepancies
     .map((row) => toException(row, actor))
     .filter((row): row is LedgerException => Boolean(row));
 
-  const injects =
-    persistence === "d1"
-      ? (await listInjects()).filter((row) =>
-          row.sectionLetter ? canViewSection(actor, row.sectionLetter) : isOdaVisible(actor),
-        )
-      : fixtureInjects(actor);
+  const injects = injectsRaw
+    ? injectsRaw.filter((row) =>
+        row.sectionLetter ? canViewSection(actor, row.sectionLetter) : isOdaVisible(actor),
+      )
+    : fixtureInjects(actor);
 
-  const da2062Imports =
-    persistence === "d1"
-      ? (await listDa2062Imports()).filter((row) => canSeeDa2062Import(actor, row))
-      : [];
+  const da2062Imports = da2062Raw.filter((row) => canSeeDa2062Import(actor, row));
 
   const sections = SECTION_LETTERS.map((letter) => {
     const holder = Object.values(PEOPLE).find((person) => person.sectionLetter === letter);

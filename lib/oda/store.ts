@@ -1,5 +1,5 @@
 import { env } from "cloudflare:workers";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import {
   accountabilityLines,
@@ -21,27 +21,20 @@ import {
   BASELINE_INJECT_AT,
   BASELINE_INJECT_LABEL,
   PACKING_LINES,
-  PEOPLE,
   SEED_CONFLICTS,
   TRACKER_LINES,
   electronicShrForSection,
   lineByKey,
-  personById,
 } from "./catalog";
+import { PEOPLE, personById } from "./people";
 import { detectSourceConflicts, type SourceFact } from "./discrepancy";
 import { identityKey } from "./identity-key";
 import { diffElectronicShr, injectCounts } from "./inject";
 import { ODA } from "./org";
 import { stencilDataUri } from "./picture-book";
 import { ODA_SCHEMA_SQL } from "./schema-sql";
-import {
-  destinationLabel,
-  enrichDa2062Lines,
-  planDa2062Confirm,
-  previewDa2062Conflicts,
-  type AcceptedSignedForLine,
-  type Da2062InDraft,
-} from "./da2062";
+import { destinationLabel, planDa2062Confirm } from "./da2062-confirm";
+import type { AcceptedSignedForLine, Da2062InDraft } from "./da2062";
 import {
   INJECT_LABEL,
   SECTION_LETTERS,
@@ -171,25 +164,66 @@ export function persistenceAvailable(): PersistenceMode {
   return d1() ? "d1" : "unavailable";
 }
 
+let cachedMode: PersistenceMode | null = null;
+let bootstrapInflight: Promise<PersistenceMode> | null = null;
+let dispositionColumnEnsured = false;
+
 export async function ensureOdaStore(): Promise<PersistenceMode> {
+  if (cachedMode === "d1") return "d1";
+  if (bootstrapInflight) return bootstrapInflight;
+  bootstrapInflight = bootstrapOdaStore()
+    .then((mode) => {
+      if (mode === "d1") cachedMode = mode;
+      return mode;
+    })
+    .finally(() => {
+      bootstrapInflight = null;
+    });
+  return bootstrapInflight;
+}
+
+async function da2062TablesReady(binding: D1Database): Promise<boolean> {
+  try {
+    const result = await binding
+      .prepare(
+        "SELECT COUNT(*) AS n FROM sqlite_master WHERE type = 'table' AND name IN ('oda_units', 'da2062_imports')",
+      )
+      .first<{ n: number }>();
+    return Number(result?.n ?? 0) >= 2;
+  } catch {
+    return false;
+  }
+}
+
+async function ensureDispositionColumn(binding: D1Database): Promise<void> {
+  if (dispositionColumnEnsured) return;
+  try {
+    await binding
+      .prepare(
+        "ALTER TABLE da2062_import_lines ADD COLUMN disposition text DEFAULT 'accept' NOT NULL",
+      )
+      .run();
+  } catch {
+    // Column already exists on stores created after Slice 1 confirm UX.
+  }
+  dispositionColumnEnsured = true;
+}
+
+async function bootstrapOdaStore(): Promise<PersistenceMode> {
   const binding = d1();
   if (!binding) return "unavailable";
   try {
-    const statements = ODA_SCHEMA_SQL.split(";").map((part) => part.trim()).filter(Boolean);
-    for (const statement of statements) {
-      await binding.prepare(statement).run();
+    const ready = await da2062TablesReady(binding);
+    if (!ready) {
+      const statements = ODA_SCHEMA_SQL.split(";")
+        .map((part) => part.trim())
+        .filter(Boolean)
+        .map((statement) => binding.prepare(statement));
+      await binding.batch(statements);
     }
-    try {
-      await binding
-        .prepare(
-          "ALTER TABLE da2062_import_lines ADD COLUMN disposition text DEFAULT 'accept' NOT NULL",
-        )
-        .run();
-    } catch {
-      // Column already exists on stores created after Slice 1 confirm UX.
-    }
+    await ensureDispositionColumn(binding);
     const db = getDb();
-    const existing = await db.select().from(odaUnits).limit(1);
+    const existing = await db.select({ id: odaUnits.id }).from(odaUnits).limit(1);
     if (existing.length === 0) {
       await seedOdaStore();
     }
@@ -697,8 +731,47 @@ export async function listDiscrepancies(): Promise<DiscrepancyRecord[]> {
 export async function listDa2062Imports(): Promise<Da2062ImportRecord[]> {
   if ((await ensureOdaStore()) !== "d1") return [];
   const db = getDb();
-  const rows = await db.select().from(da2062Imports).orderBy(desc(da2062Imports.id));
-  return rows.map(toDa2062ImportRecord);
+  const rows = await db
+    .select({
+      id: da2062Imports.id,
+      publicKey: da2062Imports.publicKey,
+      parsePath: da2062Imports.parsePath,
+      destinationKind: da2062Imports.destinationKind,
+      destinationSection: da2062Imports.destinationSection,
+      issuer: da2062Imports.issuer,
+      gainingParty: da2062Imports.gainingParty,
+      gainingSection: da2062Imports.gainingSection,
+      uic: da2062Imports.uic,
+      filename: da2062Imports.filename,
+      importedAt: da2062Imports.importedAt,
+      importedBy: da2062Imports.importedBy,
+      priorImportId: da2062Imports.priorImportId,
+      lineCount: da2062Imports.lineCount,
+      discrepancyCount: da2062Imports.discrepancyCount,
+      notes: da2062Imports.notes,
+      hasPdf: sql<number>`(${da2062Imports.sourcePdfData} IS NOT NULL)`,
+    })
+    .from(da2062Imports)
+    .orderBy(desc(da2062Imports.id));
+  return rows.map((row) => ({
+    id: row.id,
+    publicKey: row.publicKey,
+    parsePath: row.parsePath,
+    destinationKind: row.destinationKind,
+    destinationSection: (row.destinationSection as SectionLetter | null) ?? null,
+    issuer: row.issuer,
+    gainingParty: row.gainingParty,
+    gainingSection: (row.gainingSection as SectionLetter | null) ?? null,
+    uic: row.uic,
+    filename: row.filename,
+    importedAt: row.importedAt,
+    importedBy: row.importedBy,
+    priorImportId: row.priorImportId,
+    lineCount: row.lineCount,
+    discrepancyCount: row.discrepancyCount,
+    notes: row.notes,
+    hasPdf: Boolean(row.hasPdf),
+  }));
 }
 
 export async function listAcceptedDa2062Lines(): Promise<AcceptedSignedForLine[]> {
@@ -801,6 +874,7 @@ export async function writeDa2062In(input: {
   if ((await ensureOdaStore()) !== "d1") {
     throw new Error("D1 is unavailable. DA Form 2062 in was not written.");
   }
+  const { previewDa2062Conflicts, enrichDa2062Lines } = await import("./da2062");
   const conflicts = previewDa2062Conflicts(input.draft);
   const plan = planDa2062Confirm({
     lines: input.draft.lines,
