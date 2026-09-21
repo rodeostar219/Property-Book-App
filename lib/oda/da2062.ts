@@ -445,15 +445,23 @@ export function signedForAdditionItem(line: AcceptedSignedForLine): PropertyItem
   };
 }
 
+export function signedForMatchKey(input: {
+  nsn?: string | null;
+  serial?: string | null;
+}): string {
+  const serial = (input.serial ?? "").trim().toUpperCase();
+  if (serial) return `sn:${serial}`;
+  const nsn = (input.nsn ?? "").replace(/\s+/g, "").toUpperCase();
+  return nsn ? `nsn:${nsn}` : "unknown";
+}
+
 export function mergeSignedForAdditions(
   catalogItems: PropertyItem[],
   additions: AcceptedSignedForLine[],
 ): PropertyItem[] {
-  const existing = new Set(
-    catalogItems.map((item) => identityKey({ nsn: item.nsn, serial: item.serial })),
-  );
+  const existing = new Set(catalogItems.map((item) => signedForMatchKey(item)));
   const extra = additions
-    .filter((line) => !existing.has(identityKey(line)))
+    .filter((line) => !existing.has(signedForMatchKey(line)))
     .map(signedForAdditionItem);
   return [...catalogItems, ...extra];
 }

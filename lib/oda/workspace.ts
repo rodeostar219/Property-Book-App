@@ -14,8 +14,7 @@ import {
 import { canViewSection, visibleSectionLetters } from "./access";
 import { ODA, sectionShrLabel, sectionTitle } from "./org";
 import { asPhotoSrc, stencilDataUri } from "./picture-book";
-import { mergeSignedForAdditions } from "./da2062";
-import { identityKey } from "./identity-key";
+import { mergeSignedForAdditions, signedForMatchKey } from "./da2062";
 import {
   ensureOdaStore,
   getDa2062Import,
@@ -178,7 +177,7 @@ export async function loadWorkspace(actor: Actor): Promise<Workspace> {
         acceptedAdditions.filter(
           (line) =>
             line.destinationSection === letter &&
-            !ACCOUNTABILITY_LINES.some((row) => identityKey(row) === identityKey(line)),
+            !ACCOUNTABILITY_LINES.some((row) => signedForMatchKey(row) === signedForMatchKey(line)),
         ).length,
       visible: canViewSection(actor, letter),
     };

@@ -265,6 +265,8 @@ describe("DA Form 2062 in", () => {
     assert.match(radio?.sourceReceipt ?? "", /companion signed-for/);
     const iridiumMatches = merged.filter((item) => item.serial === "300415040404300");
     assert.equal(iridiumMatches.length, 1);
+    const miniSatMatches = merged.filter((item) => item.nsn === "589501D050302");
+    assert.equal(miniSatMatches.length, 1);
     assert.ok(merged.length > echoItems.length);
   });
 
