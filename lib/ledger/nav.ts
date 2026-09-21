@@ -24,6 +24,7 @@ export const soldierNav: NavItem[] = [
   { href: "/", label: "Home", icon: Home },
   { href: "/my-property", label: "My section", icon: Package },
   { href: "/sections", label: "ODA sections", icon: Users },
+  { href: "/receipts/2062-in", label: "2062 in", icon: ScrollText },
   { href: "/exceptions", label: "Exceptions", icon: AlertTriangle, badgeKey: "exceptions" },
 ];
 
@@ -50,6 +51,7 @@ export function pageTitleForPath(pathname: string): string {
     "/sections": "ODA sections",
     "/receipts": "Hand receipts",
     "/loans": "DA Form 2062",
+    "/receipts/2062-in": "DA Form 2062 in",
     "/exceptions": "Exceptions",
     "/documents": "Documents",
   };
@@ -57,6 +59,7 @@ export function pageTitleForPath(pathname: string): string {
   if (pathname.startsWith("/items/") || pathname.startsWith("/lines/")) return "Hand-receipt line";
   if (pathname.startsWith("/exceptions/")) return "Discrepancy";
   if (pathname.startsWith("/sections/")) return "Section Sub-hand receipt";
+  if (pathname.startsWith("/receipts/2062-in/history")) return "2062 in history";
   if (pathname.startsWith("/receipts/history")) return "SHR inject history";
   return "ODA Property Workspace";
 }

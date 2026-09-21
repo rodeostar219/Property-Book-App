@@ -29,7 +29,10 @@ function pairKey(a: FactSource, b: FactSource, identity: string): string {
  * Compare layered sources. Never merge. A mismatch opens a discrepancy.
  * Official vs common/actual name is visual ID and is not a conflict.
  */
-export function detectSourceConflicts(facts: SourceFact[]): SourceConflict[] {
+export function detectSourceConflicts(
+  facts: SourceFact[],
+  options?: { includePictureBook?: boolean },
+): SourceConflict[] {
   const byIdentity = new Map<string, SourceFact[]>();
   for (const fact of facts) {
     const key = identityKey(fact);
@@ -40,6 +43,7 @@ export function detectSourceConflicts(facts: SourceFact[]): SourceConflict[] {
 
   const seen = new Set<string>();
   const conflicts: SourceConflict[] = [];
+  const includePicture = options?.includePictureBook === true;
 
   for (const [key, group] of byIdentity) {
     for (let i = 0; i < group.length; i += 1) {
@@ -47,14 +51,16 @@ export function detectSourceConflicts(facts: SourceFact[]): SourceConflict[] {
         const a = group[i];
         const b = group[j];
         if (a.source === b.source) continue;
-        if (a.source === "picture_book" || b.source === "picture_book") {
+        const involvesPicture = a.source === "picture_book" || b.source === "picture_book";
+        if (involvesPicture && !includePicture) {
           continue;
         }
+        const nameMismatch = involvesPicture ? false : a.nomenclature !== b.nomenclature;
         const mismatch =
           a.present !== b.present ||
           a.quantity !== b.quantity ||
           (a.serial ?? null) !== (b.serial ?? null) ||
-          a.nomenclature !== b.nomenclature;
+          nameMismatch;
         if (!mismatch) continue;
         const dedupe = pairKey(a.source, b.source, key);
         if (seen.has(dedupe)) continue;
@@ -92,6 +98,8 @@ export function sourceLabel(source: FactSource): string {
       return "Picture book (visual ID)";
     case "packing_1750":
       return "DD Form 1750";
+    case "da_2062":
+      return "DA Form 2062";
     default:
       return source;
   }

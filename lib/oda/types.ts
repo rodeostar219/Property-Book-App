@@ -17,7 +17,16 @@ export type FactSource =
   | "sub_hand_receipt"
   | "tracker"
   | "picture_book"
-  | "packing_1750";
+  | "packing_1750"
+  | "da_2062";
+
+export type Da2062ParsePath = "electronic" | "ocr";
+
+export type Da2062DestinationKind = "oda_hr" | "section_shr";
+
+export type Da2062Direction = "in";
+
+export type LineDisposition = "accept" | "skip" | "flag";
 
 export type InjectChangeType = "added" | "removed" | "changed" | "unchanged";
 

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, ClipboardCheck } from "lucide-react";
+import { AlertTriangle, ClipboardCheck, ScrollText } from "lucide-react";
 import { CurrentBadge } from "@/components/ledger/app-shell";
 import { Metric } from "@/components/ledger/metric";
 import { PageHeader } from "@/components/ledger/page-header";
@@ -28,7 +28,14 @@ export function PmHome({
         title="ODA home"
         description="Section switcher and My signed-for first — the unit-wide book is under ODA property, not here."
         meta={`${UNIT.uic} ${UNIT.name} · ${UNIT.group} · ${UNIT.installation} · ${actor.fullName}`}
-        actions={<CurrentBadge>Hand receipt current</CurrentBadge>}
+        actions={
+          <div className="page-title-actions">
+            <Link className="snapshot-link" href="/receipts/2062-in">
+              <ScrollText /> DA Form 2062 in
+            </Link>
+            <CurrentBadge>Hand receipt current</CurrentBadge>
+          </div>
+        }
       />
       <SectionSwitcher sections={sections} />
       <div className="metrics soldier-metrics">

@@ -53,7 +53,7 @@ export function PropertyTable({
                 </td>
               ) : null}
               <td>
-                <Link href={`/lines/${item.id}`} className="item-link">
+                <Link href={item.detailHref ?? `/lines/${item.id}`} className="item-link">
                   <code>{item.nsn}</code>
                   <b>{item.officialName ?? item.name}</b>
                 </Link>
