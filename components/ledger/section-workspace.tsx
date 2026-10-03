@@ -88,6 +88,14 @@ export function SectionWorkspace({
     () => monthlyPiecePoints(injects, sectionLetter).filter((point) => point.year === year),
     [injects, sectionLetter, year],
   );
+  const uploadedMonthCount = cells.filter((cell) => cell.state === "uploaded").length;
+  const withoutPieceTotalNote = uploadedWithoutPieceTotalNote(
+    cells.filter(
+      (cell) =>
+        cell.state === "uploaded" &&
+        !points.some((point) => point.year === cell.year && point.month === cell.month),
+    ),
+  );
   const totals = handReceiptTotals(
     lines.map((line) => ({
       ...line,
@@ -175,7 +183,7 @@ export function SectionWorkspace({
           </h2>
           <p className="lb-note">
             Visual identification for this section: a picture plus the line’s identification. Not a hand receipt.
-            Official nomenclature stays with the picture. A stencil is not a photo.
+            Official nomenclature stays on the line, next to the picture. A stencil is not a photo.
           </p>
           <PictureGroup title="Missing picture" lines={missingPhotos} selectedId={selectedId} onOpen={setSelectedId} />
           <PictureGroup title="Picture on file" lines={withPhotos} selectedId={selectedId} onOpen={setSelectedId} />
@@ -189,7 +197,9 @@ export function SectionWorkspace({
         <div className="lb-section-head">
           <h2 id="shr-months" className="lb-group">
             Monthly Sub-hand receipts
-            <span>{cells.filter((cell) => cell.state === "uploaded").length}</span>
+            <span>
+              {uploadedMonthCount} uploaded {uploadedMonthCount === 1 ? "month" : "months"}
+            </span>
           </h2>
           <label className="lb-year-select">
             <span>Year</span>
@@ -247,7 +257,10 @@ export function SectionWorkspace({
           <span>pieces from current hand-receipt line quantities</span>
         </p>
         <TrendChart points={points} />
-        <p className="lb-gap">{pieceTotalChartNote(totals.pieces, points)}</p>
+        <p className="lb-gap">
+          {pieceTotalChartNote(totals.pieces, points)}
+          {withoutPieceTotalNote ? ` ${withoutPieceTotalNote}` : ""}
+        </p>
       </section>
 
       <section aria-labelledby="movement-section" id="movement">
@@ -658,6 +671,16 @@ function TrendChart({ points }: { points: PiecePoint[] }) {
       </table>
     </figure>
   );
+}
+
+function uploadedWithoutPieceTotalNote(months: Array<{ name: string; year: number }>): string | null {
+  if (months.length === 0) return null;
+  if (months.length === 1) {
+    const month = months[0];
+    return `${month.name} ${month.year}’s uploaded Sub-hand receipt has no stored piece total.`;
+  }
+  const list = months.map((month) => `${month.name} ${month.year}`).join(", ");
+  return `${list}: each uploaded Sub-hand receipt has no stored piece total.`;
 }
 
 function compareLines(a: SectionLine, b: SectionLine, sort: SortKey): number {
