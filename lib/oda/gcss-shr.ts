@@ -3,11 +3,9 @@ import { extractPdfPayload } from "./da2062-pdf";
 import {
   MONTH_NAMES,
   encodeSerialCells,
-  lineSerialCount,
-  receiptSerialCount,
+  filledGridCellCount,
   validateMonthlyPeriod,
   type SerialCell,
-  type ShrReceiptLine,
 } from "./months";
 
 /** Known totals for Ryan's 1 Sep 2026 ODA Sub-hand receipt. Not a fabricated extract. */
@@ -18,7 +16,7 @@ export const RYAN_SEPTEMBER_2026 = {
   day: 1,
   endItems: 36,
   ohQty: 105,
-  filledSerials: 184,
+  filledCells: 184,
 } as const;
 
 export type GcssEndItem = {
@@ -27,7 +25,7 @@ export type GcssEndItem = {
   nomenclature: string;
   /** On-hand quantity. LABST on the GCSS form. Not a serial count. */
   ohQty: number;
-  /** Null when this end item cannot tell SerNo from RegNo from LotNo. */
+  /** Grid cells kept as read. Unmarked cells are not SerNo, RegNo, or a lot flag. */
   serialCells: SerialCell[] | null;
 };
 
@@ -42,8 +40,8 @@ export type GcssShrDraft = {
 export type ShrParsedCounts = {
   endItems: number;
   ohQty: number;
-  /** Null when any end item does not identify SerNo and RegNo separately from LotNo. */
-  filledSerials: number | null;
+  /** Every non-blank grid cell. A blank is not filled. Marks are not required. */
+  filledCells: number;
 };
 
 const MONTH_INDEX: Record<string, number> = {
@@ -115,60 +113,47 @@ export function receiptDateLabel(draft: Pick<GcssShrDraft, "year" | "month" | "d
   return `${draft.day} ${MONTH_NAMES[draft.month - 1]} ${draft.year}`;
 }
 
-function isGridHeader(line: string): boolean {
-  return /ser\s*-?\s*no/i.test(line) && /reg\s*-?\s*no/i.test(line) && /lot\s*-?\s*no/i.test(line);
+const COLUMN_LABEL = /^(?:ser\s*-?\s*no|reg\s*-?\s*no|lot\s*-?\s*no)$/i;
+
+function isColumnHeaderLine(line: string): boolean {
+  const parts = (line.includes("|") ? line.split("|") : line.trim().split(/\s+/))
+    .map((part) => part.trim())
+    .filter(Boolean);
+  return parts.length > 0 && parts.every((part) => COLUMN_LABEL.test(part));
 }
 
-function cleanLabelValue(value: string): string {
-  return value.replace(/^[\s:=/|]+/, "").replace(/[\s:=/|]+$/, "").trim();
+/** Keep the cell. A SerNo or RegNo label on that cell is the only mark. Never invent a lot flag. */
+function cellFromText(raw: string): SerialCell {
+  const text = raw.trim();
+  if (!text) return { kind: "unmarked", value: null };
+  const ser = text.match(/^(?:ser\s*-?\s*no)\s*[:=]\s*(.*)$/i);
+  if (ser) return { kind: "serNo", value: blankSerialToNull(ser[1]) };
+  const reg = text.match(/^(?:reg\s*-?\s*no)\s*[:=]\s*(.*)$/i);
+  if (reg) return { kind: "regNo", value: blankSerialToNull(reg[1]) };
+  const labeled = text.match(/^(?:lot\s*-?\s*no)\s*[:=]\s*(.*)$/i);
+  if (labeled) return { kind: "unmarked", value: blankSerialToNull(labeled[1]) };
+  return { kind: "unmarked", value: blankSerialToNull(text) };
 }
 
-function betweenLabels(line: string, start: RegExp, end: RegExp | null): string {
-  const startMatch = start.exec(line);
-  if (!startMatch) return "";
-  const from = startMatch.index + startMatch[0].length;
-  const rest = line.slice(from);
-  if (!end) return cleanLabelValue(rest);
-  const endMatch = end.exec(rest);
-  if (!endMatch) return cleanLabelValue(rest);
-  return cleanLabelValue(rest.slice(0, endMatch.index));
-}
-
-function cellsFromParts(parts: [string, string, string]): SerialCell[] {
-  return [
-    { kind: "serNo", value: blankSerialToNull(parts[0]) },
-    { kind: "regNo", value: blankSerialToNull(parts[1]) },
-    { kind: "lotNo", value: blankSerialToNull(parts[2]) },
-  ];
-}
-
-function parsePipeRow(line: string): SerialCell[] | "ambiguous" | null {
-  if (!line.includes("|")) return null;
-  const parts = line.split("|").map((part) => part.trim());
-  if (parts.length !== 3) return "ambiguous";
-  if (parts.every((part) => /^(ser\s*-?\s*no|reg\s*-?\s*no|lot\s*-?\s*no)$/i.test(part))) return null;
-  return cellsFromParts([parts[0] ?? "", parts[1] ?? "", parts[2] ?? ""]);
-}
-
-/** A labeled data row such as `SerNo: SN1 RegNo: LotNo: LOT`. A bare header returns null. */
-function parseLabeledRow(line: string): SerialCell[] | null {
-  if (!isGridHeader(line) || line.includes("|")) return null;
-  const ser = betweenLabels(line, /ser\s*-?\s*no/i, /reg\s*-?\s*no/i);
-  const reg = betweenLabels(line, /reg\s*-?\s*no/i, /lot\s*-?\s*no/i);
-  const lot = betweenLabels(line, /lot\s*-?\s*no/i, null);
-  if (!ser && !reg && !lot) {
-    if (/[:=]/.test(line)) return cellsFromParts(["", "", ""]);
-    return null;
+function cellsFromTokens(tokens: string[]): SerialCell[] {
+  const cells: SerialCell[] = [];
+  for (let index = 0; index < tokens.length; index += 1) {
+    const token = tokens[index] ?? "";
+    const next = tokens[index + 1];
+    if (/^(?:ser\s*-?\s*no|reg\s*-?\s*no|lot\s*-?\s*no):$/i.test(token) && next && !/:/.test(next)) {
+      cells.push(cellFromText(`${token} ${next}`));
+      index += 1;
+      continue;
+    }
+    cells.push(cellFromText(token));
   }
-  return cellsFromParts([ser, reg, lot]);
+  return cells;
 }
 
-function parseTokenRow(line: string): SerialCell[] | "ambiguous" | null {
-  if (line.includes("|") || isGridHeader(line)) return null;
-  const tokens = line.trim().split(/\s+/).filter(Boolean);
-  if (tokens.length === 0) return null;
-  if (tokens.length !== 3) return "ambiguous";
-  return cellsFromParts([tokens[0] ?? "", tokens[1] ?? "", tokens[2] ?? ""]);
+function cellsFromLine(line: string): SerialCell[] {
+  if (isColumnHeaderLine(line)) return [];
+  if (line.includes("|")) return line.split("|").map((part) => cellFromText(part));
+  return cellsFromTokens(line.trim().split(/\s+/).filter(Boolean));
 }
 
 type FieldBits = {
@@ -179,7 +164,7 @@ type FieldBits = {
 };
 
 function isDateOnlyLine(line: string): boolean {
-  if (isGridHeader(line)) return false;
+  if (isColumnHeaderLine(line)) return false;
   return (
     /^\s*(?:receipt\s+)?date\b/i.test(line) ||
     /^\d{1,2}[\s\-\/.]+[A-Za-z]+\.?[\s\-\/.]+\d{4}\s*$/i.test(line) ||
@@ -213,8 +198,6 @@ type WorkingItem = {
   nomenclature: string | null;
   ohQty: number | null;
   serialCells: SerialCell[];
-  sawHeader: boolean;
-  unclassified: boolean;
 };
 
 function blankItem(): WorkingItem {
@@ -224,8 +207,6 @@ function blankItem(): WorkingItem {
     nomenclature: null,
     ohQty: null,
     serialCells: [],
-    sawHeader: false,
-    unclassified: false,
   };
 }
 
@@ -243,7 +224,7 @@ function flushItem(item: WorkingItem, lines: GcssEndItem[], errors: string[]): v
     nsn: item.nsn,
     nomenclature: item.nomenclature,
     ohQty: item.ohQty,
-    serialCells: item.unclassified ? null : item.sawHeader ? item.serialCells : null,
+    serialCells: item.serialCells.length > 0 ? item.serialCells : null,
   });
 }
 
@@ -263,12 +244,6 @@ function applyFields(current: WorkingItem | null, bits: FieldBits): WorkingItem 
   return item;
 }
 
-function appendCells(item: WorkingItem, cells: SerialCell[]): void {
-  if (item.unclassified) return;
-  item.sawHeader = true;
-  item.serialCells = [...item.serialCells, ...cells];
-}
-
 export function parseGcssShrText(
   text: string,
 ): { ok: true; draft: GcssShrDraft } | { ok: false; message: string } {
@@ -284,62 +259,34 @@ export function parseGcssShrText(
   const items: GcssEndItem[] = [];
   const errors: string[] = [];
   let current: WorkingItem | null = null;
+  let pendingCells: SerialCell[] = [];
 
   for (const raw of text.split(/\r?\n/)) {
     const line = raw.trim();
     if (!line) continue;
     if (/^\s*UIC\b/i.test(line) || isDateOnlyLine(line)) continue;
     if (/^GCSS/i.test(line) || /^sub[-\s]?hand receipt\b/i.test(line)) continue;
-
-    if (isGridHeader(line)) {
-      if (!current) {
-        errors.push("A SerNo / RegNo / LotNo grid was found before an end item.");
-        continue;
-      }
-      const labeled = parseLabeledRow(line);
-      if (labeled && labeled.some((cell) => cell.value)) {
-        appendCells(current, labeled);
-        continue;
-      }
-      current.sawHeader = true;
-      continue;
-    }
-
-    if (current?.sawHeader) {
-      const piped = parsePipeRow(line);
-      if (piped === "ambiguous") {
-        current.unclassified = true;
-        current.serialCells = [];
-        continue;
-      }
-      if (piped) {
-        appendCells(current, piped);
-        continue;
-      }
-      const tokens = parseTokenRow(line);
-      if (tokens === "ambiguous") {
-        current.unclassified = true;
-        current.serialCells = [];
-        continue;
-      }
-      if (tokens) {
-        appendCells(current, tokens);
-        continue;
-      }
-    }
+    if (isColumnHeaderLine(line)) continue;
 
     const fields = readFields(line);
     if (fields) {
       const next = applyFields(current, fields);
       if (current && next !== current) flushItem(current, items, errors);
+      if (next !== current && pendingCells.length > 0) {
+        next.serialCells.push(...pendingCells);
+        pendingCells = [];
+      }
       current = next;
       continue;
     }
 
+    const cells = cellsFromLine(line);
+    if (cells.length === 0) continue;
     if (current) {
-      current.unclassified = true;
-      current.serialCells = [];
+      current.serialCells.push(...cells);
+      continue;
     }
+    pendingCells.push(...cells);
   }
 
   if (current) flushItem(current, items, errors);
@@ -370,28 +317,17 @@ export function parseGcssShrPdf(
 }
 
 export function shrDraftCounts(draft: GcssShrDraft): ShrParsedCounts {
-  const receiptLines: ShrReceiptLine[] = draft.lines.map((line) => ({
-    injectId: 0,
-    ohQty: line.ohQty,
-    untypedSerial: null,
-    serialCells: line.serialCells,
-    changeType: "added",
-  }));
-  const count = receiptSerialCount(receiptLines);
   return {
     endItems: draft.lines.length,
     ohQty: draft.lines.reduce((sum, line) => sum + line.ohQty, 0),
-    filledSerials: count.status === "counted" ? count.serials : count.status === "no-serial-cells" ? 0 : null,
+    filledCells: draft.lines.reduce((sum, line) => sum + filledGridCellCount(line.serialCells), 0),
   };
 }
 
 export function formatParsedCounts(counts: ShrParsedCounts): string {
-  const serials =
-    counts.filledSerials == null
-      ? "serials not identified"
-      : `${counts.filledSerials} ${counts.filledSerials === 1 ? "serial" : "serials"}`;
   const lineWord = counts.endItems === 1 ? "line" : "lines";
-  return `${counts.endItems} end-item ${lineWord}, OH Qty ${counts.ohQty}, and ${serials}`;
+  const cellWord = counts.filledCells === 1 ? "filled cell" : "filled cells";
+  return `${counts.endItems} ${lineWord}, OH Qty ${counts.ohQty}, and ${counts.filledCells} ${cellWord}`;
 }
 
 export function isRyanSeptemberReceipt(draft: Pick<GcssShrDraft, "uic" | "year" | "month" | "day">): boolean {
@@ -407,22 +343,22 @@ export function countsMatchRyan(counts: ShrParsedCounts): boolean {
   return (
     counts.endItems === RYAN_SEPTEMBER_2026.endItems &&
     counts.ohQty === RYAN_SEPTEMBER_2026.ohQty &&
-    counts.filledSerials === RYAN_SEPTEMBER_2026.filledSerials
+    counts.filledCells === RYAN_SEPTEMBER_2026.filledCells
   );
 }
 
-export function ryanCountRefusal(draft: GcssShrDraft): string | null {
-  if (!isRyanSeptemberReceipt(draft)) return null;
-  const counts = shrDraftCounts(draft);
+/** Count mismatch for Ryan's receipt. This does not look at column marks. */
+export function filledCellCountMismatch(counts: ShrParsedCounts): string | null {
   if (countsMatchRyan(counts)) return null;
-  return `This 1 Sep 2026 ODA Sub-hand receipt does not match. Expected 36 end-item lines, OH Qty 105, and 184 serials (filled SerNo and RegNo cells). Parsed ${formatParsedCounts(counts)}. A LotNo cell is not a serial. A blank cell is not a serial. Nothing was saved.`;
+  return `Parsed ${formatParsedCounts(counts)}. Expected 36 lines, OH Qty 105, and 184 filled cells. A blank cell is not filled. Nothing was saved.`;
 }
 
 export function odaMonthlySaveRefusal(draft: GcssShrDraft, now: Date): string | null {
   if (draft.lines.length === 0) return "No end-item lines were read. Nothing was saved.";
   const periodError = validateMonthlyPeriod(draft.year, draft.month, now);
   if (periodError) return periodError;
-  return ryanCountRefusal(draft);
+  if (!isRyanSeptemberReceipt(draft)) return null;
+  return filledCellCountMismatch(shrDraftCounts(draft));
 }
 
 export type StoredOdaLine = {
@@ -435,7 +371,7 @@ export type StoredOdaLine = {
   serialCellsJson: string | null;
 };
 
-/** Rows prepared for storage. The serial column stays empty so a blank or LotNo is not copied into it. */
+/** Rows prepared for storage. The serial column stays empty so a blank or unmarked cell is not copied into it. */
 export function storedOdaLines(draft: GcssShrDraft): StoredOdaLine[] {
   return draft.lines.map((line) => ({
     lin: line.lin,
@@ -460,8 +396,4 @@ export function storedLinesMatch(
     if (row.serial != null) return false;
     return JSON.stringify(row.serialCells) === JSON.stringify(line.serialCells);
   });
-}
-
-export function filledSerialsOnLine(line: Pick<GcssEndItem, "serialCells">): number | null {
-  return lineSerialCount({ serialCells: line.serialCells });
 }

@@ -57,8 +57,11 @@ export type PiecePoint = {
   injectId: number;
 };
 
-/** A cell in the SerNo / RegNo / LotNo grid under one end item. */
-export type SerialCellKind = "serNo" | "regNo" | "lotNo";
+/**
+ * A cell in the three-across grid under one end item.
+ * `unmarked` is a grid cell with no SerNo or RegNo mark. It is not a lot flag.
+ */
+export type SerialCellKind = "serNo" | "regNo" | "lotNo" | "unmarked";
 
 export type SerialCell = {
   kind: SerialCellKind;
@@ -111,7 +114,7 @@ export function isFilledSerialCell(value: string | null | undefined): boolean {
   return blankSerialToNull(value) !== null;
 }
 
-/** Restore a stored SerNo / RegNo / LotNo grid. Unknown shapes stay unclassified. */
+/** Restore a stored grid. Unknown shapes stay unclassified so a bad row is not copied into SerNo or RegNo. */
 export function parseStoredSerialCells(raw: string | null | undefined): SerialCell[] | null {
   if (!raw) return null;
   try {
@@ -121,7 +124,7 @@ export function parseStoredSerialCells(raw: string | null | undefined): SerialCe
     for (const cell of parsed) {
       if (!cell || typeof cell !== "object") return null;
       const kind = (cell as { kind?: unknown }).kind;
-      if (kind !== "serNo" && kind !== "regNo" && kind !== "lotNo") return null;
+      if (kind !== "serNo" && kind !== "regNo" && kind !== "lotNo" && kind !== "unmarked") return null;
       const value = (cell as { value?: unknown }).value;
       if (value == null) {
         cells.push({ kind, value: null });
@@ -134,6 +137,12 @@ export function parseStoredSerialCells(raw: string | null | undefined): SerialCe
   } catch {
     return null;
   }
+}
+
+/** Every non-blank grid cell. A blank is not filled. The kind is not consulted. */
+export function filledGridCellCount(cells: SerialCell[] | null | undefined): number {
+  if (!cells) return 0;
+  return cells.reduce((sum, cell) => sum + (isFilledSerialCell(cell.value) ? 1 : 0), 0);
 }
 
 export function encodeSerialCells(cells: SerialCell[] | null): string | null {
@@ -269,7 +278,7 @@ function latestInMonth(rows: ShrInjectStamp[]): ShrInjectStamp | undefined {
 
 /**
  * Chart point for a month: filled SerNo and RegNo cells on that month's latest Sub-hand receipt.
- * LotNo, OH Qty, the live hand-receipt piece total, and an unclassified serial field are not points.
+ * Unmarked filled cells, LotNo, OH Qty, and an unclassified serial field are not points.
  * A receipt with no filled SerNo or RegNo cells is omitted, not drawn as zero.
  */
 export function monthlySerialPoints(
@@ -320,8 +329,16 @@ export function unplottedReceiptNote(
         month.injectId == null
           ? ({ status: "no-serial-cells" } as const)
           : receiptSerialCount(lines.filter((line) => line.injectId === month.injectId));
+      const monthLines =
+        month.injectId == null ? [] : lines.filter((line) => line.injectId === month.injectId);
+      const unmarked = monthLines.some((line) =>
+        line.serialCells?.some((cell) => cell.kind === "unmarked" && isFilledSerialCell(cell.value)),
+      );
       if (count.status === "untyped") {
         return `${label}’s Sub-hand receipt is present. Its lines do not identify SerNo or RegNo separately from LotNo, so the serial count is not plotted.`;
+      }
+      if (unmarked) {
+        return `${label}’s Sub-hand receipt is present. Its filled cells are unmarked, so they are not plotted.`;
       }
       return `${label}’s Sub-hand receipt is present and has no SerNo or RegNo cells to count, so it is not plotted.`;
     })

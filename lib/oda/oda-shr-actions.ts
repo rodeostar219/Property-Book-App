@@ -5,11 +5,12 @@ import { getActor } from "@/lib/ledger/identity";
 import { isOdaScope } from "./access";
 import type { ActionResult } from "./da2062-actions";
 import {
+  filledCellCountMismatch,
   formatParsedCounts,
+  isRyanSeptemberReceipt,
   odaMonthlySaveRefusal,
   parseGcssShrPdf,
   receiptDateLabel,
-  ryanCountRefusal,
   shrDraftCounts,
   storedLinesMatch,
   type GcssShrDraft,
@@ -65,7 +66,7 @@ export async function parseOdaMonthlyShr(formData: FormData): Promise<ParseOdaSh
   const parsed = parseGcssShrPdf(pdf.bytes);
   if (!parsed.ok) return { parsed: false, message: parsed.message };
   const counts = shrDraftCounts(parsed.draft);
-  const mismatch = ryanCountRefusal(parsed.draft);
+  const mismatch = isRyanSeptemberReceipt(parsed.draft) ? filledCellCountMismatch(counts) : null;
   const dateLabel = receiptDateLabel(parsed.draft);
   const countsText = formatParsedCounts(counts);
   const summary = `Review the ${dateLabel} Sub-hand receipt for UIC ${parsed.draft.uic}. ${countsText}. Nothing was saved.`;

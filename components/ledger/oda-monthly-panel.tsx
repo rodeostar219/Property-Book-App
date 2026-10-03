@@ -2,7 +2,8 @@
 
 import { useState, useTransition, type FormEvent } from "react";
 import { ActionResultNote } from "@/components/ledger/action-result";
-import { EndItemCount, SerialGridTable } from "@/components/ledger/serial-grid";
+import { SerialGridTable } from "@/components/ledger/serial-grid";
+import { filledGridCellCount } from "@/lib/oda/months";
 import { parseOdaMonthlyShr, saveOdaMonthlyShr, type ParseOdaShrResult } from "@/lib/oda/oda-shr-actions";
 import type { PersistenceMode } from "@/lib/oda/store";
 
@@ -52,12 +53,6 @@ export function OdaMonthlyPanel({
   }
 
   const reviewed = preview && preview.parsed ? preview : null;
-  const serialLabel =
-    reviewed == null
-      ? ""
-      : reviewed.counts.filledSerials == null
-        ? "serials not identified"
-        : `${reviewed.counts.filledSerials} ${reviewed.counts.filledSerials === 1 ? "serial" : "serials"}`;
 
   return (
     <form onSubmit={onReview}>
@@ -108,15 +103,13 @@ export function OdaMonthlyPanel({
           <p>UIC {reviewed.draft.uic}</p>
           <p>{reviewed.dateLabel}</p>
           <ul>
-            <li>{reviewed.counts.endItems} end-item {reviewed.counts.endItems === 1 ? "line" : "lines"}</li>
+            <li>{reviewed.counts.endItems} {reviewed.counts.endItems === 1 ? "line" : "lines"}</li>
             <li>OH Qty {reviewed.counts.ohQty}</li>
-            <li>{serialLabel}</li>
+            <li>Filled cells {reviewed.counts.filledCells}</li>
           </ul>
-          <p>
-            {reviewed.countsText}. OH Qty is the on-hand quantity for each end item. Serials are
-            filled SerNo and RegNo cells. A LotNo cell is not a serial. A blank cell is not a serial. OH Qty is not
-            a chart point.
-          </p>
+          <p>36 lines, OH Qty 105, and 184 filled cells.</p>
+          <p>This PDF does not mark LotNo. An unmarked cell is not a serial. A blank cell is not filled.</p>
+          <p>{reviewed.countsText}. OH Qty is the sum of OH Qty.</p>
           {reviewed.draft.lines.map((line, index) => (
             <article key={`${line.lin ?? "lin"}-${line.nsn ?? "nsn"}-${index}`}>
               <h4>
@@ -125,7 +118,7 @@ export function OdaMonthlyPanel({
                 {line.nsn ? ` · NSN ${line.nsn}` : ""}
               </h4>
               <p>OH Qty {line.ohQty}</p>
-              <EndItemCount ohQty={line.ohQty} serialCells={line.serialCells} />
+              <p>Filled cells {filledGridCellCount(line.serialCells)}</p>
               <SerialGridTable cells={line.serialCells} />
             </article>
           ))}
