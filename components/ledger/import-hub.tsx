@@ -3,14 +3,13 @@
 import { useState } from "react";
 import { Da2062InPanel } from "@/components/ledger/da2062-in-panel";
 import { InjectPanel } from "@/components/ledger/inject-panel";
+import { OdaMonthlyPanel } from "@/components/ledger/oda-monthly-panel";
 import {
   BOM_IMPORT_GAP,
   DA2062_IN_DIRECTION,
   DA2062_OUT_DIRECTION,
   DA2062_OUT_GAP,
-  ODA_MONTHLY_SHR_GAP,
 } from "@/lib/oda/overview";
-import { MONTH_NAMES, validateMonthlyPeriod } from "@/lib/oda/months";
 import { SECTION_META, type Da2062DestinationKind, type SectionLetter } from "@/lib/oda/types";
 import type { Actor } from "@/lib/ledger/types";
 import type { PersistenceMode } from "@/lib/oda/store";
@@ -20,8 +19,8 @@ type ImportKind = "shr-oda" | "shr-section" | "bom" | "2062-in" | "2062-out";
 const OPTIONS: Array<{ id: ImportKind; title: string; detail: string }> = [
   {
     id: "shr-oda",
-    title: "ODA Monthly Sub Hand Receipt",
-    detail: "Month and year for the ODA Sub-hand receipt under the primary hand receipt holder.",
+    title: "ODA Monthly Sub-hand receipt",
+    detail: "GCSS Sub-hand receipt PDF. The receipt date sets the month.",
   },
   {
     id: "shr-section",
@@ -60,22 +59,14 @@ export function ImportHub({
   nowIso: string;
   sections: SectionLetter[];
 }) {
-  const now = new Date(nowIso);
   const [kind, setKind] = useState<ImportKind>("2062-in");
   const [section, setSection] = useState<SectionLetter>(defaultSection ?? actor.sectionLetter ?? sections[0] ?? "E");
-  const [month, setMonth] = useState("");
-  const [year, setYear] = useState(String(now.getUTCFullYear()));
   const [outParty, setOutParty] = useState<"person" | "section" | "organization" | "">("");
   const [returnDate, setReturnDate] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
 
   function refuse(message: string) {
     setNotice(message);
-  }
-
-  function periodProblem(): string | null {
-    if (!month) return "Month and year are required. Nothing was saved.";
-    return validateMonthlyPeriod(Number(year), Number(month), now);
   }
 
   return (
@@ -110,18 +101,10 @@ export function ImportHub({
 
       <div className="lb-detail lb-import-flow" aria-live="polite">
         {kind === "shr-oda" ? (
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              const problem = periodProblem();
-              refuse(problem ?? ODA_MONTHLY_SHR_GAP);
-            }}
-          >
-            <h3>ODA Monthly Sub Hand Receipt</h3>
-            <PeriodFields month={month} year={year} now={now} setMonth={setMonth} setYear={setYear} />
-            <p className="lb-gap">{ODA_MONTHLY_SHR_GAP}</p>
-            <button type="submit">Save ODA monthly Sub-hand receipt</button>
-          </form>
+          <OdaMonthlyPanel
+            persistence={persistence}
+            canSave={actor.scope === "oda" || actor.role === "pm"}
+          />
         ) : null}
 
         {kind === "shr-section" ? (
@@ -227,49 +210,6 @@ export function ImportHub({
           </p>
         ) : null}
       </div>
-    </div>
-  );
-}
-
-function PeriodFields({
-  month,
-  year,
-  now,
-  setMonth,
-  setYear,
-}: {
-  month: string;
-  year: string;
-  now: Date;
-  setMonth: (value: string) => void;
-  setYear: (value: string) => void;
-}) {
-  return (
-    <div className="lb-period">
-      <label>
-        Month
-        <select aria-label="Month" value={month} onChange={(event) => setMonth(event.target.value)}>
-          <option value="">Select month</option>
-          {MONTH_NAMES.map((name, index) => (
-            <option key={name} value={String(index + 1)}>
-              {name}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label>
-        Year
-        <select aria-label="Year" value={year} onChange={(event) => setYear(event.target.value)}>
-          {[0, 1, 2].map((offset) => {
-            const value = now.getUTCFullYear() - offset;
-            return (
-              <option key={value} value={String(value)}>
-                {value}
-              </option>
-            );
-          })}
-        </select>
-      </label>
     </div>
   );
 }

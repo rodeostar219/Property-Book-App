@@ -111,6 +111,57 @@ export function isFilledSerialCell(value: string | null | undefined): boolean {
   return blankSerialToNull(value) !== null;
 }
 
+/** Restore a stored SerNo / RegNo / LotNo grid. Unknown shapes stay unclassified. */
+export function parseStoredSerialCells(raw: string | null | undefined): SerialCell[] | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return null;
+    const cells: SerialCell[] = [];
+    for (const cell of parsed) {
+      if (!cell || typeof cell !== "object") return null;
+      const kind = (cell as { kind?: unknown }).kind;
+      if (kind !== "serNo" && kind !== "regNo" && kind !== "lotNo") return null;
+      const value = (cell as { value?: unknown }).value;
+      if (value == null) {
+        cells.push({ kind, value: null });
+        continue;
+      }
+      if (typeof value !== "string") return null;
+      cells.push({ kind, value: blankSerialToNull(value) });
+    }
+    return cells;
+  } catch {
+    return null;
+  }
+}
+
+export function encodeSerialCells(cells: SerialCell[] | null): string | null {
+  if (cells == null) return null;
+  return JSON.stringify(cells);
+}
+
+export type SerialGridRow = {
+  serNo: string | null;
+  regNo: string | null;
+  lotNo: string | null;
+};
+
+/** Three-across rows. Null when the stored cells are not SerNo, RegNo, LotNo in that order. */
+export function serialGridRows(cells: SerialCell[] | null): SerialGridRow[] | null {
+  if (cells == null || cells.length % 3 !== 0) return null;
+  const rows: SerialGridRow[] = [];
+  for (let index = 0; index < cells.length; index += 3) {
+    const ser = cells[index];
+    const reg = cells[index + 1];
+    const lot = cells[index + 2];
+    if (!ser || !reg || !lot) return null;
+    if (ser.kind !== "serNo" || reg.kind !== "regNo" || lot.kind !== "lotNo") return null;
+    rows.push({ serNo: ser.value, regNo: reg.value, lotNo: lot.value });
+  }
+  return rows;
+}
+
 /** Filled SerNo and RegNo cells. Null when the line does not identify those cells. LotNo is not counted. */
 export function lineSerialCount(line: Pick<ShrReceiptLine, "serialCells">): number | null {
   if (line.serialCells == null) return null;
@@ -173,13 +224,24 @@ export function classifyMonth(
   return "missing";
 }
 
+function stampInScope(
+  row: ShrInjectStamp,
+  sectionLetter: string,
+  includeOdaLevel: boolean,
+): boolean {
+  if (row.sectionLetter === sectionLetter) return true;
+  return includeOdaLevel && (row.sectionLetter == null || row.sectionLetter === "");
+}
+
 export function yearMonthCells(
   year: number,
   injects: ShrInjectStamp[],
   sectionLetter: string,
   now: Date,
+  options?: { includeOdaLevel?: boolean },
 ): MonthCell[] {
-  const mine = injects.filter((row) => row.sectionLetter === sectionLetter);
+  const includeOdaLevel = options?.includeOdaLevel === true;
+  const mine = injects.filter((row) => stampInScope(row, sectionLetter, includeOdaLevel));
   return MONTH_LABELS.map((label, index) => {
     const month = index + 1;
     const matches = mine.filter((row) => {
@@ -214,8 +276,10 @@ export function monthlySerialPoints(
   injects: ShrInjectStamp[],
   lines: ShrReceiptLine[],
   sectionLetter: string,
+  options?: { includeOdaLevel?: boolean },
 ): PiecePoint[] {
-  const mine = injects.filter((row) => row.sectionLetter === sectionLetter);
+  const includeOdaLevel = options?.includeOdaLevel === true;
+  const mine = injects.filter((row) => stampInScope(row, sectionLetter, includeOdaLevel));
   const buckets = new Map<string, ShrInjectStamp[]>();
   for (const row of mine) {
     const period = injectPeriod(row);

@@ -25,9 +25,6 @@ export function pieceTotalChartNote(
   return `${MONTHLY_CENSUS_NOTE} The latest chart point is ${latest.serials} ${serialWord} on the ${when} Sub-hand receipt. That count is filled SerNo and RegNo cells. It is not the current hand-receipt total of ${livePieces} pieces and it is not OH Qty.`;
 }
 
-export const ODA_MONTHLY_SHR_GAP =
-  "An ODA monthly Sub-hand receipt is not saved. Monthly updates that exist are section Sub-hand receipts. Nothing was written.";
-
 export const BOM_IMPORT_GAP =
   "BOM import is not saved. Component hand receipt import (COEI / BII / AAL) is not wired, so no component rows were written.";
 
