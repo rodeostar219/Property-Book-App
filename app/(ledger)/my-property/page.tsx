@@ -66,6 +66,9 @@ export default async function MyPropertyPage({
         sectionLetter={sectionLetter}
         lines={lines}
         injects={injects}
+        receiptLines={workspace.shrLines.filter((line) =>
+          injects.some((row) => row.id === line.injectId),
+        )}
         nowIso={now.toISOString()}
         years={[...years].sort((a, b) => a - b)}
         movement={query.movement ?? null}

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { CompanionBanner } from "@/components/ledger/companion-banner";
 import { PageHeader } from "@/components/ledger/page-header";
 import { formatSerial, INJECT_FEED_LABEL } from "@/lib/ledger/copy";
+import { endItemCountNote } from "@/lib/oda/months";
 import { getActor } from "@/lib/ledger/identity";
 import { loadInjectDetail } from "@/lib/oda/workspace";
 
@@ -72,7 +73,7 @@ export default async function InjectHistoryPage({
                 <th>Change</th>
                 <th>NSN / nomenclature</th>
                 <th>Serial</th>
-                <th>Qty</th>
+                <th>OH Qty</th>
                 <th>Prior</th>
               </tr>
             </thead>
@@ -91,10 +92,16 @@ export default async function InjectHistoryPage({
                   <td>
                     <strong>{formatSerial(line.serial)}</strong>
                   </td>
-                  <td>{line.quantity}</td>
+                  <td>
+                    {line.quantity}
+                    <br />
+                    <small>
+                      {endItemCountNote({ ohQty: line.quantity, serialCells: null })}
+                    </small>
+                  </td>
                   <td>
                     {line.changeType === "changed"
-                      ? `was qty ${line.priorQuantity ?? "n/a"} · ${line.priorNomenclature ?? ""}`
+                      ? `was OH Qty ${line.priorQuantity ?? "n/a"} · ${line.priorNomenclature ?? ""}`
                       : "not a change"}
                   </td>
                 </tr>

@@ -22,6 +22,7 @@ import {
   listAcceptedDa2062Lines,
   listDa2062Imports,
   listDiscrepancies,
+  listInjectLineStamps,
   listInjects,
   listPictureBooks,
   type Da2062ImportLineRecord,
@@ -33,6 +34,7 @@ import {
   type PersistenceMode,
   type PictureBookRow,
 } from "./store";
+import type { ShrReceiptLine } from "./months";
 import { SECTION_LETTERS, SECTION_META, type SectionLetter } from "./types";
 import type { Actor, LedgerException, PropertyItem } from "@/lib/ledger/types";
 
@@ -66,6 +68,7 @@ export type Workspace = {
   items: LayeredLine[];
   exceptions: LedgerException[];
   injects: InjectRecord[];
+  shrLines: ShrReceiptLine[];
   pictures: PictureBookRow[];
   da2062Imports: Da2062ImportRecord[];
 };
@@ -166,6 +169,19 @@ export async function loadWorkspace(actor: Actor): Promise<Workspace> {
         row.sectionLetter ? canViewSection(actor, row.sectionLetter) : isOdaVisible(actor),
       )
     : fixtureInjects(actor);
+  const lineStamps = injectsRaw ? await listInjectLineStamps() : null;
+  const visibleInjectIds = new Set(injects.map((row) => row.id));
+  const shrLines: ShrReceiptLine[] = lineStamps
+    ? lineStamps
+        .filter((row) => visibleInjectIds.has(row.injectId))
+        .map((row) => ({
+          injectId: row.injectId,
+          ohQty: row.quantity,
+          untypedSerial: row.serial,
+          serialCells: null,
+          changeType: row.changeType,
+        }))
+    : fixtureShrLines(injects);
 
   const da2062Imports = da2062Raw.filter((row) => canSeeDa2062Import(actor, row));
 
@@ -189,7 +205,7 @@ export async function loadWorkspace(actor: Actor): Promise<Workspace> {
     };
   });
 
-  return { persistence, sections, items, exceptions, injects, pictures, da2062Imports };
+  return { persistence, sections, items, exceptions, injects, shrLines, pictures, da2062Imports };
 }
 
 function canSeeDa2062Import(actor: Actor, row: Da2062ImportRecord): boolean {
@@ -200,6 +216,19 @@ function canSeeDa2062Import(actor: Actor, row: Da2062ImportRecord): boolean {
 
 function isOdaVisible(actor: Actor): boolean {
   return actor.scope === "oda" || actor.role === "pm";
+}
+
+function fixtureShrLines(injects: InjectRecord[]): ShrReceiptLine[] {
+  return injects.flatMap((inject) => {
+    if (!inject.sectionLetter) return [];
+    return electronicShrForSection(inject.sectionLetter).map((line) => ({
+      injectId: inject.id,
+      ohQty: line.quantity,
+      untypedSerial: line.serial,
+      serialCells: null,
+      changeType: "added" as const,
+    }));
+  });
 }
 
 function fixtureInjects(actor: Actor): InjectRecord[] {

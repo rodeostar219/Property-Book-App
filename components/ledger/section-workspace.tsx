@@ -12,10 +12,12 @@ import {
 import {
   MONTH_NAMES,
   adjacentPointPairs,
-  monthlyPiecePoints,
+  monthlySerialPoints,
+  unplottedReceiptNote,
   yearMonthCells,
   type PiecePoint,
   type ShrInjectStamp,
+  type ShrReceiptLine,
 } from "@/lib/oda/months";
 import { formatSerial } from "@/lib/ledger/copy";
 import type { AccountabilityStatus } from "@/lib/ledger/types";
@@ -55,6 +57,7 @@ export function SectionWorkspace({
   sectionLetter,
   lines,
   injects,
+  receiptLines,
   nowIso,
   years,
   movement,
@@ -62,6 +65,7 @@ export function SectionWorkspace({
   sectionLetter: SectionLetter;
   lines: SectionLine[];
   injects: ShrInjectStamp[];
+  receiptLines: ShrReceiptLine[];
   nowIso: string;
   years: number[];
   movement: string | null;
@@ -85,16 +89,17 @@ export function SectionWorkspace({
     [injects, now, sectionLetter, year],
   );
   const points = useMemo(
-    () => monthlyPiecePoints(injects, sectionLetter).filter((point) => point.year === year),
-    [injects, sectionLetter, year],
+    () => monthlySerialPoints(injects, receiptLines, sectionLetter).filter((point) => point.year === year),
+    [injects, receiptLines, sectionLetter, year],
   );
   const uploadedMonthCount = cells.filter((cell) => cell.state === "uploaded").length;
-  const withoutPieceTotalNote = uploadedWithoutPieceTotalNote(
+  const unplottedNote = unplottedReceiptNote(
     cells.filter(
       (cell) =>
         cell.state === "uploaded" &&
         !points.some((point) => point.year === cell.year && point.month === cell.month),
     ),
+    receiptLines,
   );
   const totals = handReceiptTotals(
     lines.map((line) => ({
@@ -258,8 +263,8 @@ export function SectionWorkspace({
         </p>
         <TrendChart points={points} />
         <p className="lb-gap">
-          {pieceTotalChartNote(totals.pieces, points)}
-          {withoutPieceTotalNote ? ` ${withoutPieceTotalNote}` : ""}
+          {pieceTotalChartNote(totals.pieces, points, uploadedMonthCount)}
+          {unplottedNote ? ` ${unplottedNote}` : ""}
         </p>
       </section>
 
@@ -621,29 +626,29 @@ function TrendChart({ points }: { points: PiecePoint[] }) {
   const width = 560;
   const height = 128;
   const pad = 18;
-  const min = Math.min(...points.map((point) => point.pieces));
-  const max = Math.max(...points.map((point) => point.pieces));
+  const min = Math.min(...points.map((point) => point.serials));
+  const max = Math.max(...points.map((point) => point.serials));
   const span = Math.max(max - min, 1);
   const x = (index: number) =>
     points.length === 1 ? width / 2 : pad + (index * (width - pad * 2)) / (points.length - 1);
-  const y = (pieces: number) => pad + ((max - pieces) / span) * (height - pad * 2);
+  const y = (serials: number) => pad + ((max - serials) / span) * (height - pad * 2);
   const pairs = adjacentPointPairs(points);
 
   return (
     <figure className="lb-chart">
-      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Stored monthly Sub-hand receipt totals">
+      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Serials on each monthly Sub-hand receipt">
         {pairs.map(([start, end]) => (
           <line
             key={`${start}-${end}`}
             x1={x(start)}
-            y1={y(points[start].pieces)}
+            y1={y(points[start].serials)}
             x2={x(end)}
-            y2={y(points[end].pieces)}
+            y2={y(points[end].serials)}
           />
         ))}
         {points.map((point, index) => (
           <g key={`${point.year}-${point.month}`}>
-            <circle cx={x(index)} cy={y(point.pieces)} r="4" />
+            <circle cx={x(index)} cy={y(point.serials)} r="4" />
             <text x={x(index)} y={height - 2} textAnchor="middle">
               {MONTH_NAMES[point.month - 1].slice(0, 3)}
             </text>
@@ -651,11 +656,11 @@ function TrendChart({ points }: { points: PiecePoint[] }) {
         ))}
       </svg>
       <table>
-        <caption>Monthly piece totals on record</caption>
+        <caption>Serials on each monthly Sub-hand receipt</caption>
         <thead>
           <tr>
             <th scope="col">Month</th>
-            <th scope="col">Pieces</th>
+            <th scope="col">Serials</th>
           </tr>
         </thead>
         <tbody>
@@ -664,23 +669,13 @@ function TrendChart({ points }: { points: PiecePoint[] }) {
               <td>
                 {MONTH_NAMES[point.month - 1]} {point.year}
               </td>
-              <td>{point.pieces}</td>
+              <td>{point.serials}</td>
             </tr>
           ))}
         </tbody>
       </table>
     </figure>
   );
-}
-
-function uploadedWithoutPieceTotalNote(months: Array<{ name: string; year: number }>): string | null {
-  if (months.length === 0) return null;
-  if (months.length === 1) {
-    const month = months[0];
-    return `${month.name} ${month.year}’s uploaded Sub-hand receipt has no stored piece total.`;
-  }
-  const list = months.map((month) => `${month.name} ${month.year}`).join(", ");
-  return `${list}: each uploaded Sub-hand receipt has no stored piece total.`;
 }
 
 function compareLines(a: SectionLine, b: SectionLine, sort: SortKey): number {
