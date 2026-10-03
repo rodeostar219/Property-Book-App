@@ -87,6 +87,7 @@ export default async function SectionPage({
         sectionLetter={letter}
         persistence={workspace.persistence}
         canEdit={canViewSection(actor, letter)}
+        nowIso={new Date().toISOString()}
       />
       <PropertySearch
         items={items}

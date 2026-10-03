@@ -1,11 +1,9 @@
 import Link from "next/link";
 import { FileScan } from "lucide-react";
 import { CompanionBanner } from "@/components/ledger/companion-banner";
-import { CurrentBadge } from "@/components/ledger/app-shell";
-import { Da2062InPanel } from "@/components/ledger/da2062-in-panel";
-import { PageHeader } from "@/components/ledger/page-header";
-import { DA_2062_IN_NOTE, DA_2062_IN_TITLE } from "@/lib/ledger/copy";
+import { ImportHub } from "@/components/ledger/import-hub";
 import { getActor } from "@/lib/ledger/identity";
+import { visibleSectionLetters } from "@/lib/oda/access";
 import { loadDa2062InShell } from "@/lib/oda/da2062-shell";
 import type { Da2062DestinationKind, SectionLetter } from "@/lib/oda/types";
 import { SECTION_LETTERS } from "@/lib/oda/types";
@@ -38,17 +36,13 @@ export default async function Da2062InPage({
   return (
     <>
       <CompanionBanner persistence={workspace.persistence} />
-      <PageHeader
-        title={DA_2062_IN_TITLE}
-        description={DA_2062_IN_NOTE}
-        meta={`${actor.fullName} · ${actor.mos ?? "18E"} · JBLM · destination ${defaultKind === "oda_hr" ? "ODA HR" : `${defaultSection} SHR`}`}
-        actions={<CurrentBadge>Confirm before write</CurrentBadge>}
-      />
-      <Da2062InPanel
+      <ImportHub
         actor={actor}
         persistence={workspace.persistence}
         defaultKind={defaultKind}
         defaultSection={defaultKind === "oda_hr" ? null : defaultSection}
+        nowIso={new Date().toISOString()}
+        sections={visibleSectionLetters(actor)}
       />
       <section className="panel month-compare">
         <div className="panel-head">

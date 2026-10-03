@@ -5,6 +5,7 @@ import { getActor } from "@/lib/ledger/identity";
 import { assertCanViewSection } from "./access";
 import { catalogLineOrThrow } from "./workspace";
 import { demoIncomingEchoShr } from "./catalog";
+import { MONTH_NAMES, validateMonthlyPeriod } from "./months";
 import { stencilDataUri } from "./picture-book";
 import { ensureOdaStore, readAccountabilitySnapshot, writeInject, writePictureBook } from "./store";
 import type { ElectronicShrLine, SectionLetter } from "./types";
@@ -134,6 +135,7 @@ export async function updateCommonName(
 export async function injectSectionChanges(
   sectionLetter: SectionLetter,
   payloadJson?: string,
+  period?: { year: number; month: number },
 ): Promise<ActionResult> {
   const blocked = await requireD1();
   if (blocked) return blocked;
@@ -143,6 +145,11 @@ export async function injectSectionChanges(
   } catch (error) {
     return fail(error instanceof Error ? error.message : "Section isolation blocked this write.");
   }
+  if (!period) {
+    return fail("Month and year are required for a monthly Sub-hand receipt. Nothing was saved.");
+  }
+  const periodError = validateMonthlyPeriod(period.year, period.month, new Date());
+  if (periodError) return fail(periodError);
 
   let incoming;
   if (payloadJson?.trim()) {
@@ -156,13 +163,15 @@ export async function injectSectionChanges(
   } else if (sectionLetter === "E") {
     incoming = demoIncomingEchoShr();
   } else {
-    return fail("Sprint 1 ships a canned Echo electronic SHR. Paste JSON to inject another section.");
+    return fail("Sprint 1 ships a canned Echo electronic SHR. Paste JSON to update another section.");
   }
 
   const result = await writeInject({
     sectionLetter,
     incoming,
     actorName: actor.fullName,
+    period,
+    notes: `Monthly Sub-hand receipt for ${MONTH_NAMES[period.month - 1]} ${period.year}. Not Accept theater. Prior snapshots remain queryable.`,
   });
   revalidatePath("/receipts");
   revalidatePath(`/receipts/history/${result.injectId}`);
@@ -171,6 +180,6 @@ export async function injectSectionChanges(
   return {
     ok: true,
     injectId: result.injectId,
-    message: `Sub-hand receipt update written as inject #${result.injectId}. ${result.discrepancyKeys.length} source mismatch${result.discrepancyKeys.length === 1 ? "" : "es"} opened as discrepancies. Prior snapshots remain queryable.`,
+    message: `Sub-hand receipt update for ${MONTH_NAMES[period.month - 1]} ${period.year} written as update #${result.injectId}. ${result.discrepancyKeys.length} source mismatch${result.discrepancyKeys.length === 1 ? "" : "es"} opened as discrepancies. Prior snapshots remain queryable.`,
   };
 }

@@ -27,7 +27,7 @@ export default async function ReceiptsPage() {
       <CompanionBanner persistence={workspace.persistence} />
       <PageHeader
         title="Hand receipts"
-        description="ODA hand receipt plus electronic Sub-hand receipt (SHR) inject history. Not a monthly product. Not Accept theater."
+        description="ODA hand receipt plus electronic Sub-hand receipt (SHR) update history. Not a monthly product. Not Accept theater."
         actions={
           <Button asChild>
             <Link href="/receipts/2062-in">
@@ -41,7 +41,12 @@ export default async function ReceiptsPage() {
       {current ? <PhrhChrome source={current} /> : null}
       {shr ? <PhrhChrome source={shr} compact /> : null}
 
-      <InjectPanel sectionLetter="E" persistence={workspace.persistence} canEdit />
+      <InjectPanel
+        sectionLetter="E"
+        persistence={workspace.persistence}
+        canEdit
+        nowIso={new Date().toISOString()}
+      />
 
       <section className="panel month-compare">
         <div className="panel-head">
@@ -53,7 +58,7 @@ export default async function ReceiptsPage() {
         </div>
         <div className="month-grid">
           {workspace.injects.length === 0 ? (
-            <p className="table-empty">No inject snapshots yet.</p>
+            <p className="table-empty">No Sub-hand receipt updates yet.</p>
           ) : (
             workspace.injects.map((inject) => (
               <article key={inject.id}>

@@ -13,7 +13,7 @@ import {
 } from "./catalog";
 import { canViewSection, visibleSectionLetters } from "./access";
 import { ODA, sectionShrLabel, sectionTitle } from "./org";
-import { asPhotoSrc, stencilDataUri } from "./picture-book";
+import { asPhotoSrc, hasStoredPicture, stencilDataUri } from "./picture-book";
 import { mergeSignedForAdditions, signedForMatchKey } from "./da2062";
 import {
   ensureOdaStore,
@@ -70,18 +70,24 @@ export type Workspace = {
   da2062Imports: Da2062ImportRecord[];
 };
 
+function isLayeredLine(item: PropertyItem): item is LayeredLine {
+  return "layers" in item;
+}
+
 function applyPicture(item: PropertyItem, pictures: PictureBookRow[]): LayeredLine {
   const picture = pictures.find((row) => row.lineKey === item.id);
   const packing = PACKING_LINES.find(
     (row) => row.serial === item.serial || row.nsn === item.nsn,
   );
   const tracker = TRACKER_LINES.find((row) => row.serial && row.serial === item.serial);
+  const storedPhoto = picture?.photoData ?? item.photoData ?? null;
   return {
     ...item,
     officialName: picture?.officialName ?? item.officialName,
     commonName: picture?.commonName ?? item.commonName,
+    hasPictureBookPhoto: hasStoredPicture(storedPhoto),
     photoData: asPhotoSrc(
-      picture?.photoData ?? item.photoData ?? stencilDataUri(item.commonName ?? item.name, item.name),
+      storedPhoto ?? stencilDataUri(item.commonName ?? item.name, item.name),
       picture?.photoContentType,
     ),
     layers: {
@@ -147,7 +153,9 @@ export async function loadWorkspace(actor: Actor): Promise<Workspace> {
       ? isOdaVisible(actor)
       : Boolean(line.destinationSection && canViewSection(actor, line.destinationSection)),
   );
-  const items = mergeSignedForAdditions(catalogItems, acceptedAdditions);
+  const items = mergeSignedForAdditions(catalogItems, acceptedAdditions).map((item) =>
+    isLayeredLine(item) ? item : applyPicture(item, pictures),
+  );
 
   const exceptions = discrepancies
     .map((row) => toException(row, actor))
@@ -206,7 +214,7 @@ function fixtureInjects(actor: Actor): InjectRecord[] {
     changedCount: 0,
     unchangedCount: 0,
     priorInjectId: index === 0 ? null : index,
-    notes: "Fixture snapshot — D1 unavailable, inject writes disabled.",
+    notes: "Fixture snapshot — D1 unavailable, Sub-hand receipt writes disabled.",
   }));
 }
 

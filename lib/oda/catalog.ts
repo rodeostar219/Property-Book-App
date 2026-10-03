@@ -511,10 +511,12 @@ export function toPropertyItem(line: CatalogLine): PropertyItem {
   const holder = personById(line.shrHolderId);
   return {
     id: line.key,
+    lin: line.lin,
     nsn: line.nsn,
     name: line.officialName,
     officialName: line.officialName,
     commonName: line.commonName,
+    hasPictureBookPhoto: false,
     serial: line.serial,
     quantityRequired: line.quantity,
     quantityOnHand: line.status === "shortage_recorded" ? 0 : line.quantity,
