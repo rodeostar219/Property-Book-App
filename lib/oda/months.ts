@@ -1,3 +1,5 @@
+import { blankSerialToNull } from "./da2062";
+
 export const MONTH_LABELS = [
   "Jan",
   "Feb",
@@ -50,12 +52,33 @@ export type MonthCell = {
 export type PiecePoint = {
   year: number;
   month: number;
-  pieces: number;
+  /** Filled SerNo and RegNo cells on that month's Sub-hand receipt. */
+  serials: number;
   injectId: number;
 };
 
+/** A cell in the SerNo / RegNo / LotNo grid under one end item. */
+export type SerialCellKind = "serNo" | "regNo" | "lotNo";
+
+export type SerialCell = {
+  kind: SerialCellKind;
+  value: string | null;
+};
+
+/**
+ * One end item on a monthly Sub-hand receipt.
+ * `serialCells` is null when the stored line cannot tell a LotNo cell from a SerNo or RegNo cell.
+ * `ohQty` is the on-hand quantity for that end item. It is not a chart point.
+ */
+export type ShrReceiptLine = {
+  injectId: number;
+  ohQty: number;
+  untypedSerial: string | null;
+  serialCells: SerialCell[] | null;
+  changeType?: string;
+};
+
 const PERIOD_RE = /shr-period:(\d{4})-(\d{2})/;
-const PIECES_RE = /shr-pieces:(\d+)/;
 
 export function monthIndex(year: number, month: number): number {
   return year * 12 + (month - 1);
@@ -84,11 +107,57 @@ export function injectPeriod(inject: ShrInjectStamp): { year: number; month: num
   return { year: date.getUTCFullYear(), month: date.getUTCMonth() + 1 };
 }
 
-export function recordedPieces(inject: ShrInjectStamp): number | null {
-  const tagged = inject.notes?.match(PIECES_RE);
-  if (!tagged) return null;
-  const pieces = Number(tagged[1]);
-  return Number.isInteger(pieces) && pieces >= 0 ? pieces : null;
+export function isFilledSerialCell(value: string | null | undefined): boolean {
+  return blankSerialToNull(value) !== null;
+}
+
+/** Filled SerNo and RegNo cells. Null when the line does not identify those cells. LotNo is not counted. */
+export function lineSerialCount(line: Pick<ShrReceiptLine, "serialCells">): number | null {
+  if (line.serialCells == null) return null;
+  return line.serialCells.filter(
+    (cell) => (cell.kind === "serNo" || cell.kind === "regNo") && isFilledSerialCell(cell.value),
+  ).length;
+}
+
+export function endItemCounts(line: Pick<ShrReceiptLine, "serialCells" | "ohQty">): {
+  serials: number | null;
+  ohQty: number;
+  differs: boolean | null;
+} {
+  const serials = lineSerialCount(line);
+  if (serials == null) return { serials: null, ohQty: line.ohQty, differs: null };
+  return { serials, ohQty: line.ohQty, differs: serials !== line.ohQty };
+}
+
+/** Screen sentence for one end item. OH Qty stays labeled. Serials are SerNo and RegNo only. */
+export function endItemCountNote(line: Pick<ShrReceiptLine, "serialCells" | "ohQty">): string {
+  const counts = endItemCounts(line);
+  if (counts.serials == null) {
+    return `OH Qty ${counts.ohQty}. This line does not identify SerNo or RegNo separately from LotNo, so it has no serial count.`;
+  }
+  const serialLabel = `${counts.serials} ${counts.serials === 1 ? "serial" : "serials"}`;
+  if (counts.differs) {
+    return `${serialLabel}. OH Qty ${counts.ohQty}. Serials and OH Qty differ.`;
+  }
+  return `${serialLabel}. OH Qty ${counts.ohQty}.`;
+}
+
+export type ReceiptSerialCount =
+  | { status: "counted"; serials: number }
+  | { status: "untyped" }
+  | { status: "no-serial-cells" };
+
+function onReceipt(line: ShrReceiptLine): boolean {
+  return line.changeType !== "removed";
+}
+
+/** Count filled SerNo and RegNo cells. Do not guess from an unclassified serial field or from OH Qty. */
+export function receiptSerialCount(lines: ShrReceiptLine[]): ReceiptSerialCount {
+  const present = lines.filter(onReceipt);
+  if (present.some((line) => line.serialCells == null)) return { status: "untyped" };
+  const serials = present.reduce((sum, line) => sum + (lineSerialCount(line) ?? 0), 0);
+  if (serials === 0) return { status: "no-serial-cells" };
+  return { status: "counted", serials };
 }
 
 export function classifyMonth(
@@ -132,12 +201,20 @@ export function yearMonthCells(
   });
 }
 
+function latestInMonth(rows: ShrInjectStamp[]): ShrInjectStamp | undefined {
+  return [...rows].sort((a, b) => a.injectedAt.localeCompare(b.injectedAt) || a.id - b.id).at(-1);
+}
+
 /**
- * Chart points are stored monthly Sub-hand receipt totals only.
- * A snapshot without a stored piece total is not plotted, and the live
- * hand-receipt piece count is never drawn as a point that was not stored.
+ * Chart point for a month: filled SerNo and RegNo cells on that month's latest Sub-hand receipt.
+ * LotNo, OH Qty, the live hand-receipt piece total, and an unclassified serial field are not points.
+ * A receipt with no filled SerNo or RegNo cells is omitted, not drawn as zero.
  */
-export function monthlyPiecePoints(injects: ShrInjectStamp[], sectionLetter: string): PiecePoint[] {
+export function monthlySerialPoints(
+  injects: ShrInjectStamp[],
+  lines: ShrReceiptLine[],
+  sectionLetter: string,
+): PiecePoint[] {
   const mine = injects.filter((row) => row.sectionLetter === sectionLetter);
   const buckets = new Map<string, ShrInjectStamp[]>();
   for (const row of mine) {
@@ -151,24 +228,40 @@ export function monthlyPiecePoints(injects: ShrInjectStamp[], sectionLetter: str
 
   const points: PiecePoint[] = [];
   for (const [key, rows] of buckets) {
+    const latest = latestInMonth(rows);
+    if (!latest) continue;
+    const count = receiptSerialCount(lines.filter((line) => line.injectId === latest.id));
+    if (count.status !== "counted") continue;
     const [yearText, monthText] = key.split("-");
-    const year = Number(yearText);
-    const month = Number(monthText);
-    const withPieces = rows
-      .map((row) => ({ row, pieces: recordedPieces(row) }))
-      .filter((entry): entry is { row: ShrInjectStamp; pieces: number } => entry.pieces !== null)
-      .sort((a, b) => a.row.injectedAt.localeCompare(b.row.injectedAt) || a.row.id - b.row.id);
-    const recorded = withPieces.at(-1);
-    if (!recorded) continue;
     points.push({
-      year,
-      month,
-      pieces: recorded.pieces,
-      injectId: recorded.row.id,
+      year: Number(yearText),
+      month: Number(monthText),
+      serials: count.serials,
+      injectId: latest.id,
     });
   }
 
   return points.sort((a, b) => monthIndex(a.year, a.month) - monthIndex(b.year, b.month));
+}
+
+export function unplottedReceiptNote(
+  months: Array<{ name: string; year: number; injectId: number | null }>,
+  lines: ShrReceiptLine[],
+): string | null {
+  if (months.length === 0) return null;
+  return months
+    .map((month) => {
+      const label = `${month.name} ${month.year}`;
+      const count =
+        month.injectId == null
+          ? ({ status: "no-serial-cells" } as const)
+          : receiptSerialCount(lines.filter((line) => line.injectId === month.injectId));
+      if (count.status === "untyped") {
+        return `${label}’s Sub-hand receipt is present. Its lines do not identify SerNo or RegNo separately from LotNo, so the serial count is not plotted.`;
+      }
+      return `${label}’s Sub-hand receipt is present and has no SerNo or RegNo cells to count, so it is not plotted.`;
+    })
+    .join(" ");
 }
 
 /** Connect a line only across adjacent recorded months. A gap is not a zero. */

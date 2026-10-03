@@ -69,24 +69,28 @@ describe("commander hand receipt totals", () => {
     }
   });
 
-  it("keeps the live piece total separate from stored monthly Sub-hand receipt totals", () => {
+  it("keeps the live piece total separate from monthly serial counts and from OH Qty", () => {
     assert.match(MONTHLY_CENSUS_NOTE, /current hand-receipt line quantities/);
-    assert.match(MONTHLY_CENSUS_NOTE, /stored monthly Sub-hand receipt totals/);
-    assert.match(MONTHLY_CENSUS_NOTE, /not the live hand-receipt piece count/);
+    assert.match(MONTHLY_CENSUS_NOTE, /serials on that month's Sub-hand receipt/);
+    assert.match(MONTHLY_CENSUS_NOTE, /filled SerNo and RegNo cells/);
+    assert.match(MONTHLY_CENSUS_NOTE, /not that live piece total and not OH Qty/);
+    assert.match(MONTHLY_CENSUS_NOTE, /LotNo cell is not a serial/);
     assert.match(MONTHLY_CENSUS_NOTE, /omitted, not drawn as zero/);
     assert.doesNotMatch(MONTHLY_CENSUS_NOTE, /inject/i);
+    assert.doesNotMatch(MONTHLY_CENSUS_NOTE, /stored piece total/);
 
-    const empty = pieceTotalChartNote(6, []);
-    assert.match(empty, /6 pieces is not plotted/);
-    assert.doesNotMatch(empty, /inject/i);
+    const empty = pieceTotalChartNote(6, [], 0);
+    assert.match(empty, /0 uploaded months/);
+    assert.match(empty, /No serial counts are plotted/);
+    assert.match(empty, /6 pieces is not a chart point/);
+    assert.match(empty, /OH Qty is not a chart point/);
+    assert.doesNotMatch(empty, /0 pieces|inject|items/i);
 
-    const differ = pieceTotalChartNote(6, [{ year: 2026, month: 10, pieces: 7 }]);
-    assert.match(differ, /7 pieces \(October 2026\)/);
-    assert.match(differ, /current hand-receipt total is 6 pieces/);
-    assert.match(differ, /Those totals differ/);
-
-    const same = pieceTotalChartNote(6, [{ year: 2026, month: 10, pieces: 6 }]);
-    assert.match(same, /both 6 pieces/);
-    assert.match(same, /only the stored monthly Sub-hand receipt total/);
+    const point = pieceTotalChartNote(6, [{ year: 2026, month: 10, serials: 7 }], 1);
+    assert.match(point, /7 serials on the October 2026 Sub-hand receipt/);
+    assert.match(point, /filled SerNo and RegNo cells/);
+    assert.match(point, /current hand-receipt total of 6 pieces/);
+    assert.match(point, /not OH Qty/);
+    assert.doesNotMatch(point, /pieces or items|both 6 pieces|stored piece total|items/i);
   });
 });

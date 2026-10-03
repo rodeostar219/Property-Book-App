@@ -469,6 +469,21 @@ export async function readAccountabilitySnapshot(lineKey: string) {
   return row ?? null;
 }
 
+export async function listInjectLineStamps(): Promise<
+  Array<{ injectId: number; serial: string | null; quantity: number; changeType: string }>
+> {
+  if ((await ensureOdaStore()) !== "d1") return [];
+  const db = getDb();
+  return db
+    .select({
+      injectId: shrInjectLines.injectId,
+      serial: shrInjectLines.serialNumber,
+      quantity: shrInjectLines.quantity,
+      changeType: shrInjectLines.changeType,
+    })
+    .from(shrInjectLines);
+}
+
 export async function listInjects(): Promise<InjectRecord[]> {
   if ((await ensureOdaStore()) !== "d1") return [];
   const db = getDb();
@@ -555,10 +570,9 @@ export async function writeInject(input: {
   const diff = diffElectronicShr(current, input.incoming);
   const counts = injectCounts(diff);
   const now = new Date().toISOString();
-  const pieces = input.incoming.reduce((sum, line) => sum + line.quantity, 0);
   const period = input.period;
   const periodTag = period
-    ? `shr-period:${period.year}-${String(period.month).padStart(2, "0")} shr-pieces:${pieces}`
+    ? `shr-period:${period.year}-${String(period.month).padStart(2, "0")}`
     : "";
   const periodLabel = period
     ? new Date(Date.UTC(period.year, period.month - 1, 1)).toLocaleString("en-US", {
