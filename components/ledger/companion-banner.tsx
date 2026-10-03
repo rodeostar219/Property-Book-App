@@ -7,7 +7,7 @@ export function CompanionBanner({ persistence }: { persistence: PersistenceMode 
       <p>{COMPANION_NOTE}</p>
       <small>
         {persistence === "d1"
-          ? "D1 writes are live for picture book, electronic SHR inject, and confirmed DA Form 2062 in."
+          ? "D1 writes are live for picture book, electronic Sub-hand receipt updates, and confirmed DA Form 2062 in."
           : "D1 unavailable — mutations stay disabled. No fake success toasts."}
       </small>
     </aside>

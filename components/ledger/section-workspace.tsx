@@ -4,11 +4,11 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { sectionShrLabel } from "@/lib/oda/org";
 import {
-  MONTHLY_CENSUS_NOTE,
   MOVEMENT_ROWS,
   STATUS_SHORT,
   STATUS_TONE,
   handReceiptTotals,
+  pieceTotalChartNote,
 } from "@/lib/oda/overview";
 import {
   MONTH_NAMES,
@@ -55,7 +55,6 @@ export function SectionWorkspace({
   sectionLetter,
   lines,
   injects,
-  baselinePieces,
   nowIso,
   years,
   movement,
@@ -63,7 +62,6 @@ export function SectionWorkspace({
   sectionLetter: SectionLetter;
   lines: SectionLine[];
   injects: ShrInjectStamp[];
-  baselinePieces: number;
   nowIso: string;
   years: number[];
   movement: string | null;
@@ -86,8 +84,8 @@ export function SectionWorkspace({
     [injects, now, sectionLetter, year],
   );
   const points = useMemo(
-    () => monthlyPiecePoints(injects, sectionLetter, baselinePieces).filter((point) => point.year === year),
-    [baselinePieces, injects, sectionLetter, year],
+    () => monthlyPiecePoints(injects, sectionLetter).filter((point) => point.year === year),
+    [injects, sectionLetter, year],
   );
   const totals = handReceiptTotals(
     lines.map((line) => ({
@@ -215,17 +213,10 @@ export function SectionWorkspace({
         </h2>
         <p className="lb-total-inline">
           <strong>{totals.pieces}</strong>
-          <span>pieces on this section Sub-hand receipt</span>
+          <span>pieces from current hand-receipt line quantities</span>
         </p>
         <TrendChart points={points} />
-        <p className="lb-gap">
-          {MONTHLY_CENSUS_NOTE}{" "}
-          {points.length === 0
-            ? "This year has no stored monthly piece total."
-            : points.length === 1
-              ? `${MONTH_NAMES[points[0].month - 1]} ${points[0].year} is ${points[0].pieces} pieces from the ${points[0].source === "baseline" ? "baseline Sub-hand receipt snapshot" : "recorded monthly total"}. Change from another month is not available.`
-              : "The line connects only adjacent months that both have a stored total."}
-        </p>
+        <p className="lb-gap">{pieceTotalChartNote(totals.pieces, points)}</p>
       </section>
 
       <section aria-labelledby="movement-section" id="movement">
@@ -552,7 +543,7 @@ function TrendChart({ points }: { points: PiecePoint[] }) {
 
   return (
     <figure className="lb-chart">
-      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Stored monthly piece totals">
+      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Stored monthly Sub-hand receipt totals">
         {pairs.map(([start, end]) => (
           <line
             key={`${start}-${end}`}

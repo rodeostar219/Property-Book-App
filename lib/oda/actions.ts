@@ -163,7 +163,7 @@ export async function injectSectionChanges(
   } else if (sectionLetter === "E") {
     incoming = demoIncomingEchoShr();
   } else {
-    return fail("Sprint 1 ships a canned Echo electronic SHR. Paste JSON to inject another section.");
+    return fail("Sprint 1 ships a canned Echo electronic SHR. Paste JSON to update another section.");
   }
 
   const result = await writeInject({
@@ -180,6 +180,6 @@ export async function injectSectionChanges(
   return {
     ok: true,
     injectId: result.injectId,
-    message: `Sub-hand receipt update for ${MONTH_NAMES[period.month - 1]} ${period.year} written as inject #${result.injectId}. ${result.discrepancyKeys.length} source mismatch${result.discrepancyKeys.length === 1 ? "" : "es"} opened as discrepancies. Prior snapshots remain queryable.`,
+    message: `Sub-hand receipt update for ${MONTH_NAMES[period.month - 1]} ${period.year} written as update #${result.injectId}. ${result.discrepancyKeys.length} source mismatch${result.discrepancyKeys.length === 1 ? "" : "es"} opened as discrepancies. Prior snapshots remain queryable.`,
   };
 }

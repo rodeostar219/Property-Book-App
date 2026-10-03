@@ -52,8 +52,6 @@ export type PiecePoint = {
   month: number;
   pieces: number;
   injectId: number;
-  /** Baseline snapshot lines, or a piece total written with the inject. */
-  source: "baseline" | "recorded";
 };
 
 const PERIOD_RE = /shr-period:(\d{4})-(\d{2})/;
@@ -74,14 +72,6 @@ export function validateMonthlyPeriod(year: number, month: number, now: Date): s
     return "That month is still in the future. Nothing was saved.";
   }
   return null;
-}
-
-export function isBaselineSnapshot(inject: { label: string; notes: string | null }): boolean {
-  return (
-    inject.label.includes("01 Sep 26 baseline") ||
-    (inject.notes ?? "").includes("Fixture snapshot") ||
-    (inject.notes ?? "").includes("Seeded electronic Sub-hand receipt")
-  );
 }
 
 export function injectPeriod(inject: ShrInjectStamp): { year: number; month: number } | null {
@@ -143,16 +133,11 @@ export function yearMonthCells(
 }
 
 /**
- * Piece totals only where a monthly record actually stores one.
- * A baseline snapshot uses that snapshot's line quantities.
- * A later inject in the same month without shr-pieces blocks the baseline
- * so a change feed is not treated as a census.
+ * Chart points are stored monthly Sub-hand receipt totals only.
+ * A snapshot without a stored piece total is not plotted, and the live
+ * hand-receipt piece count is never drawn as a point that was not stored.
  */
-export function monthlyPiecePoints(
-  injects: ShrInjectStamp[],
-  sectionLetter: string,
-  baselinePieces: number | null,
-): PiecePoint[] {
+export function monthlyPiecePoints(injects: ShrInjectStamp[], sectionLetter: string): PiecePoint[] {
   const mine = injects.filter((row) => row.sectionLetter === sectionLetter);
   const buckets = new Map<string, ShrInjectStamp[]>();
   for (const row of mine) {
@@ -174,28 +159,13 @@ export function monthlyPiecePoints(
       .filter((entry): entry is { row: ShrInjectStamp; pieces: number } => entry.pieces !== null)
       .sort((a, b) => a.row.injectedAt.localeCompare(b.row.injectedAt) || a.row.id - b.row.id);
     const recorded = withPieces.at(-1);
-    if (recorded) {
-      points.push({
-        year,
-        month,
-        pieces: recorded.pieces,
-        injectId: recorded.row.id,
-        source: "recorded",
-      });
-      continue;
-    }
-    const baselineOnly = rows.length > 0 && rows.every((row) => isBaselineSnapshot(row));
-    if (baselineOnly && baselinePieces !== null) {
-      const latest = [...rows].sort((a, b) => a.injectedAt.localeCompare(b.injectedAt) || a.id - b.id).at(-1);
-      if (!latest) continue;
-      points.push({
-        year,
-        month,
-        pieces: baselinePieces,
-        injectId: latest.id,
-        source: "baseline",
-      });
-    }
+    if (!recorded) continue;
+    points.push({
+      year,
+      month,
+      pieces: recorded.pieces,
+      injectId: recorded.row.id,
+    });
   }
 
   return points.sort((a, b) => monthIndex(a.year, a.month) - monthIndex(b.year, b.month));

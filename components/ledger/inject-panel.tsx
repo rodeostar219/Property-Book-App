@@ -140,7 +140,7 @@ export function InjectPanel({
         </div>
         {sectionLetter === "E" ? (
           <p className="inject-hint">
-            Empty payload injects the canned Echo extract: add AN/PRC-158, drop the 163, change
+            An empty payload uses the canned Echo extract: add AN/PRC-158, drop the 163, change
             charger quantity. Mismatches open discrepancies instead of merging.
           </p>
         ) : null}

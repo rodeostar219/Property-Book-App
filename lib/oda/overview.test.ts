@@ -5,8 +5,10 @@ import { loans } from "@/lib/ledger/fixtures";
 import {
   LOAN_DIRECTION_GAP,
   MOVEMENT_ROWS,
+  MONTHLY_CENSUS_NOTE,
   REQUIRED_BOM_GAP,
   handReceiptTotals,
+  pieceTotalChartNote,
   missingPictureAttention,
   sectionItemCount,
 } from "./overview";
@@ -65,5 +67,26 @@ describe("commander hand receipt totals", () => {
       assert.equal(row.issue, "Not in the records");
       assert.equal("count" in row, false);
     }
+  });
+
+  it("keeps the live piece total separate from stored monthly Sub-hand receipt totals", () => {
+    assert.match(MONTHLY_CENSUS_NOTE, /current hand-receipt line quantities/);
+    assert.match(MONTHLY_CENSUS_NOTE, /stored monthly Sub-hand receipt totals/);
+    assert.match(MONTHLY_CENSUS_NOTE, /not the live hand-receipt piece count/);
+    assert.match(MONTHLY_CENSUS_NOTE, /omitted, not drawn as zero/);
+    assert.doesNotMatch(MONTHLY_CENSUS_NOTE, /inject/i);
+
+    const empty = pieceTotalChartNote(6, []);
+    assert.match(empty, /6 pieces is not plotted/);
+    assert.doesNotMatch(empty, /inject/i);
+
+    const differ = pieceTotalChartNote(6, [{ year: 2026, month: 10, pieces: 7 }]);
+    assert.match(differ, /7 pieces \(October 2026\)/);
+    assert.match(differ, /current hand-receipt total is 6 pieces/);
+    assert.match(differ, /Those totals differ/);
+
+    const same = pieceTotalChartNote(6, [{ year: 2026, month: 10, pieces: 6 }]);
+    assert.match(same, /both 6 pieces/);
+    assert.match(same, /only the stored monthly Sub-hand receipt total/);
   });
 });

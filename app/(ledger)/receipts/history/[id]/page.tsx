@@ -61,7 +61,7 @@ export default async function InjectHistoryPage({
           <p className="inject-hint">
             Prior snapshot stays queryable:{" "}
             <Link href={`/receipts/history/${inject.priorInjectId}`}>
-              open inject #{inject.priorInjectId}
+              open Sub-hand receipt update #{inject.priorInjectId}
             </Link>
           </p>
         ) : null}

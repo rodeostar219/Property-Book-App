@@ -85,6 +85,6 @@ export function pageTitleForPath(pathname: string): string {
   if (pathname.startsWith("/exceptions/")) return "Discrepancy";
   if (pathname.startsWith("/sections/")) return "Section Sub-hand receipt";
   if (pathname.startsWith("/receipts/2062-in/history")) return "2062 in history";
-  if (pathname.startsWith("/receipts/history")) return "SHR inject history";
+  if (pathname.startsWith("/receipts/history")) return "Sub-hand receipt history";
   return "ODA Property Workspace";
 }

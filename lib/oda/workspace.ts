@@ -214,7 +214,7 @@ function fixtureInjects(actor: Actor): InjectRecord[] {
     changedCount: 0,
     unchangedCount: 0,
     priorInjectId: index === 0 ? null : index,
-    notes: "Fixture snapshot — D1 unavailable, inject writes disabled.",
+    notes: "Fixture snapshot — D1 unavailable, Sub-hand receipt writes disabled.",
   }));
 }
 

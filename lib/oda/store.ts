@@ -342,7 +342,7 @@ async function seedOdaStore() {
       })
       .returning({ id: shrInjects.id });
     const injectId: number | undefined = inserted[0]?.id;
-    if (!injectId) throw new Error("Failed to seed SHR inject.");
+    if (!injectId) throw new Error("Failed to seed the Sub-hand receipt snapshot.");
     for (const line of current) {
       await db.insert(shrInjectLines).values({
         injectId,
@@ -581,7 +581,7 @@ export async function writeInject(input: {
       removedCount: counts.removedCount,
       changedCount: counts.changedCount,
       unchangedCount: counts.unchangedCount,
-      notes: [periodTag, input.notes ?? "Electronic Sub-hand receipt (SHR) inject. Not Accept theater. Prior snapshots remain queryable."]
+      notes: [periodTag, input.notes ?? "Electronic Sub-hand receipt (SHR) update. Not Accept theater. Prior snapshots remain queryable."]
         .filter(Boolean)
         .join(" "),
     })
@@ -669,7 +669,7 @@ async function openConflictsFromInject(
   const keys: string[] = [];
   const now = new Date().toISOString();
   for (const conflict of conflicts) {
-    const publicKey = `inject-${conflict.identityKey}-${conflict.sourceA}-${conflict.sourceB}-${now}`;
+    const publicKey = `shr-${conflict.identityKey}-${conflict.sourceA}-${conflict.sourceB}-${now}`;
     await db.insert(sourceDiscrepancies).values({
       publicKey,
       unitId,

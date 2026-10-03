@@ -1,4 +1,5 @@
 import type { AccountabilityStatus, SectionLetter } from "@/lib/ledger/types";
+import { MONTH_NAMES } from "@/lib/oda/months";
 
 export const REQUIRED_BOM_GAP =
   "Required BOM is not in the records. Some lines carry COEI, BII, or AAL component facts, and a bill-of-materials table exists, but nothing marks a line as requiring a BOM. An empty component list is not counted as a missing BOM.";
@@ -7,7 +8,22 @@ export const LOAN_DIRECTION_GAP =
   "Loan direction is not in the records. The hand receipt stores section, location, and signed-for status. It does not store equipment loaned outside the office, equipment at maintenance, or equipment signed to the team and currently borrowed. Counts are omitted so they are not read as zero, and those rows are not subtracted from the hand-receipt total.";
 
 export const MONTHLY_CENSUS_NOTE =
-  "Month-to-month change uses stored monthly piece totals only. Missing months are left out. They are not drawn as zero.";
+  "The piece total is current hand-receipt line quantities. Chart points are stored monthly Sub-hand receipt totals, not the live hand-receipt piece count. Missing months are omitted, not drawn as zero.";
+
+export function pieceTotalChartNote(
+  livePieces: number,
+  points: Array<{ year: number; month: number; pieces: number }>,
+): string {
+  const latest = points.at(-1);
+  if (!latest) {
+    return `${MONTHLY_CENSUS_NOTE} This year has no stored monthly Sub-hand receipt total, so the current hand-receipt total of ${livePieces} pieces is not plotted.`;
+  }
+  const when = `${MONTH_NAMES[latest.month - 1]} ${latest.year}`;
+  if (latest.pieces !== livePieces) {
+    return `${MONTHLY_CENSUS_NOTE} The latest stored monthly Sub-hand receipt total is ${latest.pieces} pieces (${when}). The current hand-receipt total is ${livePieces} pieces. Those totals differ.`;
+  }
+  return `${MONTHLY_CENSUS_NOTE} The latest stored monthly Sub-hand receipt total (${when}) and the current hand-receipt total are both ${livePieces} pieces. The chart still uses only the stored monthly Sub-hand receipt total.`;
+}
 
 export const ODA_MONTHLY_SHR_GAP =
   "An ODA monthly Sub-hand receipt is not saved. Monthly updates that exist are section Sub-hand receipts. Nothing was written.";

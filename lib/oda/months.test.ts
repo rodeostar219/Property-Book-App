@@ -49,7 +49,7 @@ describe("monthly Sub-hand receipt strip", () => {
     assert.match(validateMonthlyPeriod(2026, 0, NOW) ?? "", /Month/);
   });
 
-  it("plots a baseline snapshot and a later recorded total, and skips a change feed with no census", () => {
+  it("plots only stored monthly Sub-hand receipt totals and skips a snapshot with no stored total", () => {
     const points = monthlyPiecePoints(
       [
         inject({
@@ -72,19 +72,39 @@ describe("monthly Sub-hand receipt strip", () => {
         }),
       ],
       "E",
-      6,
     );
     assert.deepEqual(
-      points.map((point) => [point.month, point.pieces, point.source]),
-      [
-        [9, 6, "baseline"],
-        [10, 7, "recorded"],
-      ],
+      points.map((point) => [point.month, point.pieces]),
+      [[10, 7]],
     );
-    assert.deepEqual(adjacentPointPairs(points), [[0, 1]]);
+    assert.deepEqual(adjacentPointPairs(points), []);
   });
 
-  it("does not keep a baseline total after a later inject in that month lacks a piece total", () => {
+  it("keeps an earlier stored total when a later record in that month has none", () => {
+    const points = monthlyPiecePoints(
+      [
+        inject({
+          id: 1,
+          injectedAt: "2026-09-01T12:00:00.000Z",
+          label: "Sub-hand receipt update · Echo · Sep 2026",
+          notes: "shr-period:2026-09 shr-pieces:6",
+        }),
+        inject({
+          id: 2,
+          injectedAt: "2026-09-15T12:00:00.000Z",
+          notes: "shr-period:2026-09",
+          label: "Sub-hand receipt update · Echo · Sep 2026",
+        }),
+      ],
+      "E",
+    );
+    assert.deepEqual(
+      points.map((point) => [point.month, point.pieces]),
+      [[9, 6]],
+    );
+  });
+
+  it("does not plot a snapshot that never stored a piece total", () => {
     const points = monthlyPiecePoints(
       [
         inject({
@@ -101,7 +121,6 @@ describe("monthly Sub-hand receipt strip", () => {
         }),
       ],
       "E",
-      6,
     );
     assert.equal(points.length, 0);
   });
