@@ -167,6 +167,7 @@ export const shrInjectLines = sqliteTable("shr_inject_lines", {
   priorQuantity: integer("prior_quantity"),
   priorSerial: text("prior_serial"),
   sectionLetter: text("section_letter"),
+  serialCells: text("serial_cells"),
 }, (t) => [index("idx_shr_inject_lines_inject").on(t.injectId)]);
 
 export const sourceDiscrepancies = sqliteTable("source_discrepancies", {

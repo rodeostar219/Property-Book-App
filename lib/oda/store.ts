@@ -1,5 +1,5 @@
 import { env } from "cloudflare:workers";
-import { desc, eq, sql } from "drizzle-orm";
+import { desc, eq, isNull, sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import {
   accountabilityLines,
@@ -32,6 +32,7 @@ import { identityKey } from "./identity-key";
 import { diffElectronicShr, injectCounts } from "./inject";
 import { ODA } from "./org";
 import { stencilDataUri } from "./picture-book";
+import { encodeSerialCells, MONTH_LABELS, parseStoredSerialCells, type SerialCell } from "./months";
 import { ODA_SCHEMA_SQL } from "./schema-sql";
 import { destinationLabel, planDa2062Confirm } from "./da2062-confirm";
 import type { AcceptedSignedForLine, Da2062InDraft } from "./da2062";
@@ -82,6 +83,7 @@ export type InjectLineRecord = {
   priorQuantity: number | null;
   priorSerial: string | null;
   sectionLetter: string | null;
+  serialCells: SerialCell[] | null;
 };
 
 export type Da2062ImportRecord = {
@@ -167,6 +169,7 @@ export function persistenceAvailable(): PersistenceMode {
 let cachedMode: PersistenceMode | null = null;
 let bootstrapInflight: Promise<PersistenceMode> | null = null;
 let dispositionColumnEnsured = false;
+let serialCellsColumnEnsured = false;
 
 export async function ensureOdaStore(): Promise<PersistenceMode> {
   if (cachedMode === "d1") return "d1";
@@ -209,6 +212,16 @@ async function ensureDispositionColumn(binding: D1Database): Promise<void> {
   dispositionColumnEnsured = true;
 }
 
+async function ensureSerialCellsColumn(binding: D1Database): Promise<void> {
+  if (serialCellsColumnEnsured) return;
+  try {
+    await binding.prepare("ALTER TABLE shr_inject_lines ADD COLUMN serial_cells text").run();
+  } catch {
+    // Column already exists on stores created with the GCSS Sub-hand receipt grid.
+  }
+  serialCellsColumnEnsured = true;
+}
+
 async function bootstrapOdaStore(): Promise<PersistenceMode> {
   const binding = d1();
   if (!binding) return "unavailable";
@@ -222,6 +235,7 @@ async function bootstrapOdaStore(): Promise<PersistenceMode> {
       await binding.batch(statements);
     }
     await ensureDispositionColumn(binding);
+    await ensureSerialCellsColumn(binding);
     const db = getDb();
     const existing = await db.select({ id: odaUnits.id }).from(odaUnits).limit(1);
     if (existing.length === 0) {
@@ -470,18 +484,32 @@ export async function readAccountabilitySnapshot(lineKey: string) {
 }
 
 export async function listInjectLineStamps(): Promise<
-  Array<{ injectId: number; serial: string | null; quantity: number; changeType: string }>
+  Array<{
+    injectId: number;
+    serial: string | null;
+    quantity: number;
+    changeType: string;
+    serialCells: SerialCell[] | null;
+  }>
 > {
   if ((await ensureOdaStore()) !== "d1") return [];
   const db = getDb();
-  return db
+  const rows = await db
     .select({
       injectId: shrInjectLines.injectId,
       serial: shrInjectLines.serialNumber,
       quantity: shrInjectLines.quantity,
       changeType: shrInjectLines.changeType,
+      serialCells: shrInjectLines.serialCells,
     })
     .from(shrInjectLines);
+  return rows.map((row) => ({
+    injectId: row.injectId,
+    serial: row.serial,
+    quantity: row.quantity,
+    changeType: row.changeType,
+    serialCells: parseStoredSerialCells(row.serialCells),
+  }));
 }
 
 export async function listInjects(): Promise<InjectRecord[]> {
@@ -517,6 +545,7 @@ export async function getInject(id: number): Promise<{
       priorQuantity: line.priorQuantity,
       priorSerial: line.priorSerial,
       sectionLetter: line.sectionLetter,
+      serialCells: parseStoredSerialCells(line.serialCells),
     })),
   };
 }
@@ -620,6 +649,100 @@ export async function writeInject(input: {
 
   const discrepancyKeys = await openConflictsFromInject(unit.id, input.sectionLetter, input.incoming, input.actorName);
   return { injectId: inject.id, discrepancyKeys };
+}
+
+export async function writeOdaMonthlyShr(input: {
+  uic: string;
+  year: number;
+  month: number;
+  day: number;
+  actorName: string;
+  lines: Array<{
+    lin: string | null;
+    nsn: string | null;
+    nomenclature: string;
+    ohQty: number;
+    serialCells: SerialCell[] | null;
+  }>;
+}): Promise<{ injectId: number }> {
+  if ((await ensureOdaStore()) !== "d1") {
+    throw new Error("D1 is unavailable. The Sub-hand receipt was not written.");
+  }
+  if (input.lines.length === 0) {
+    throw new Error("No end-item lines were read. The Sub-hand receipt was not written.");
+  }
+  const db = getDb();
+  const [unit] = await db.select().from(odaUnits).limit(1);
+  if (!unit) {
+    throw new Error("The ODA book is not available. The Sub-hand receipt was not written.");
+  }
+  const [prior] = await db
+    .select({ id: shrInjects.id })
+    .from(shrInjects)
+    .where(isNull(shrInjects.sectionLetter))
+    .orderBy(desc(shrInjects.id))
+    .limit(1);
+  const now = new Date().toISOString();
+  const periodTag = `shr-period:${input.year}-${String(input.month).padStart(2, "0")}`;
+  const monthLabel = MONTH_LABELS[input.month - 1] ?? String(input.month);
+  const [inject] = await db
+    .insert(shrInjects)
+    .values({
+      unitId: unit.id,
+      sectionLetter: null,
+      label: `ODA Sub-hand receipt · ${monthLabel} ${input.year}`,
+      injectedAt: now,
+      injectedBy: input.actorName,
+      sourceKind: "gcss_sub_hand_receipt",
+      priorInjectId: prior?.id ?? null,
+      addedCount: input.lines.length,
+      removedCount: 0,
+      changedCount: 0,
+      unchangedCount: 0,
+      notes: [
+        periodTag,
+        `UIC ${input.uic}`,
+        `receipt-date:${input.year}-${String(input.month).padStart(2, "0")}-${String(input.day).padStart(2, "0")}`,
+        "ODA monthly Sub-hand receipt. Companion to GCSS-Army, not the system of record. Prior snapshots remain queryable.",
+      ].join(" "),
+    })
+    .returning();
+  if (!inject) {
+    throw new Error("The Sub-hand receipt was not written.");
+  }
+
+  try {
+    for (const line of input.lines) {
+      await db.insert(shrInjectLines).values({
+        injectId: inject.id,
+        changeType: "added",
+        lineKey: null,
+        lin: line.lin,
+        nsn: line.nsn,
+        serialNumber: null,
+        nomenclature: line.nomenclature,
+        quantity: line.ohQty,
+        priorNomenclature: null,
+        priorQuantity: null,
+        priorSerial: null,
+        sectionLetter: null,
+        serialCells: encodeSerialCells(line.serialCells),
+      });
+    }
+  } catch (error) {
+    await db.delete(shrInjectLines).where(eq(shrInjectLines.injectId, inject.id));
+    await db.delete(shrInjects).where(eq(shrInjects.id, inject.id));
+    throw error;
+  }
+
+  return { injectId: inject.id };
+}
+
+export async function deleteShrInject(injectId: number): Promise<void> {
+  if ((await ensureOdaStore()) !== "d1") return;
+  const db = getDb();
+  await db.delete(shrInjectLines).where(eq(shrInjectLines.injectId, injectId));
+  await db.delete(shrInjects).where(eq(shrInjects.id, injectId));
 }
 
 async function openConflictsFromInject(

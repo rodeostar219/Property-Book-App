@@ -178,7 +178,7 @@ export async function loadWorkspace(actor: Actor): Promise<Workspace> {
           injectId: row.injectId,
           ohQty: row.quantity,
           untypedSerial: row.serial,
-          serialCells: null,
+          serialCells: row.serialCells,
           changeType: row.changeType,
         }))
     : fixtureShrLines(injects);
@@ -269,6 +269,7 @@ export async function loadInjectDetail(actor: Actor, id: number) {
       priorQuantity: null,
       priorSerial: null,
       sectionLetter: letter,
+      serialCells: null,
     }));
     return {
       persistence,

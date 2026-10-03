@@ -44,7 +44,7 @@ export default async function MyPropertyPage({
       photoSrc: item.hasPictureBookPhoto && hasStoredPicture(item.photoData) ? item.photoData ?? null : null,
     }));
   const injects = workspace.injects
-    .filter((row) => row.sectionLetter === sectionLetter)
+    .filter((row) => row.sectionLetter === sectionLetter || row.sectionLetter == null)
     .map((row) => ({
       id: row.id,
       sectionLetter: row.sectionLetter,
@@ -72,6 +72,7 @@ export default async function MyPropertyPage({
         nowIso={now.toISOString()}
         years={[...years].sort((a, b) => a - b)}
         movement={query.movement ?? null}
+        includeOdaLevel
       />
     </>
   );

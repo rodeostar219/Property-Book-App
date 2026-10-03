@@ -111,6 +111,7 @@ CREATE TABLE IF NOT EXISTS shr_inject_lines (
   prior_quantity integer,
   prior_serial text,
   section_letter text,
+  serial_cells text,
   FOREIGN KEY (inject_id) REFERENCES shr_injects(id)
 );
 CREATE INDEX IF NOT EXISTS idx_shr_inject_lines_inject ON shr_inject_lines (inject_id);

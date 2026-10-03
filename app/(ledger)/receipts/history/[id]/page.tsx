@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CompanionBanner } from "@/components/ledger/companion-banner";
 import { PageHeader } from "@/components/ledger/page-header";
+import { SerialGridTable } from "@/components/ledger/serial-grid";
 import { formatSerial, INJECT_FEED_LABEL } from "@/lib/ledger/copy";
 import { endItemCountNote } from "@/lib/oda/months";
 import { getActor } from "@/lib/ledger/identity";
@@ -90,13 +91,17 @@ export default async function InjectHistoryPage({
                     <b>{line.nomenclature}</b>
                   </td>
                   <td>
-                    <strong>{formatSerial(line.serial)}</strong>
+                    {line.serialCells ? (
+                      <SerialGridTable cells={line.serialCells} />
+                    ) : (
+                      <strong>{formatSerial(line.serial)}</strong>
+                    )}
                   </td>
                   <td>
                     {line.quantity}
                     <br />
                     <small>
-                      {endItemCountNote({ ohQty: line.quantity, serialCells: null })}
+                      {endItemCountNote({ ohQty: line.quantity, serialCells: line.serialCells })}
                     </small>
                   </td>
                   <td>

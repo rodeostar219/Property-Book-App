@@ -61,6 +61,7 @@ export function SectionWorkspace({
   nowIso,
   years,
   movement,
+  includeOdaLevel = false,
 }: {
   sectionLetter: SectionLetter;
   lines: SectionLine[];
@@ -69,6 +70,7 @@ export function SectionWorkspace({
   nowIso: string;
   years: number[];
   movement: string | null;
+  includeOdaLevel?: boolean;
 }) {
   const now = useMemo(() => new Date(nowIso), [nowIso]);
   const [year, setYear] = useState(now.getUTCFullYear());
@@ -85,12 +87,15 @@ export function SectionWorkspace({
   const [movementId, setMovementId] = useState<string | null>(movement);
 
   const cells = useMemo(
-    () => yearMonthCells(year, injects, sectionLetter, now),
-    [injects, now, sectionLetter, year],
+    () => yearMonthCells(year, injects, sectionLetter, now, { includeOdaLevel }),
+    [includeOdaLevel, injects, now, sectionLetter, year],
   );
   const points = useMemo(
-    () => monthlySerialPoints(injects, receiptLines, sectionLetter).filter((point) => point.year === year),
-    [injects, receiptLines, sectionLetter, year],
+    () =>
+      monthlySerialPoints(injects, receiptLines, sectionLetter, { includeOdaLevel }).filter(
+        (point) => point.year === year,
+      ),
+    [includeOdaLevel, injects, receiptLines, sectionLetter, year],
   );
   const uploadedMonthCount = cells.filter((cell) => cell.state === "uploaded").length;
   const unplottedNote = unplottedReceiptNote(
