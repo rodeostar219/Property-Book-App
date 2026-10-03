@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { sectionShrLabel } from "@/lib/oda/org";
 import {
   MOVEMENT_ROWS,
   STATUS_SHORT,
@@ -38,6 +37,7 @@ export type SectionLine = {
 
 type SortKey = "lin" | "nomenclature" | "actual" | "nsn" | "serial" | "location" | "status";
 type Tab = "all" | "missing-picture" | "needs-serial";
+type PageView = "section" | "picture-book";
 
 const SORTS: Array<{ id: SortKey; label: string }> = [
   { id: "lin", label: "LIN" },
@@ -68,6 +68,7 @@ export function SectionWorkspace({
 }) {
   const now = useMemo(() => new Date(nowIso), [nowIso]);
   const [year, setYear] = useState(now.getUTCFullYear());
+  const [view, setView] = useState<PageView>("section");
   const [tab, setTab] = useState<Tab>("all");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortKey>("lin");
@@ -86,6 +87,14 @@ export function SectionWorkspace({
   const points = useMemo(
     () => monthlyPiecePoints(injects, sectionLetter).filter((point) => point.year === year),
     [injects, sectionLetter, year],
+  );
+  const uploadedMonthCount = cells.filter((cell) => cell.state === "uploaded").length;
+  const withoutPieceTotalNote = uploadedWithoutPieceTotalNote(
+    cells.filter(
+      (cell) =>
+        cell.state === "uploaded" &&
+        !points.some((point) => point.year === cell.year && point.month === cell.month),
+    ),
   );
   const totals = handReceiptTotals(
     lines.map((line) => ({
@@ -140,16 +149,61 @@ export function SectionWorkspace({
 
   return (
     <div className="lb">
+      <div className="lb-view-tabs" role="tablist" aria-label="My section">
+        <button
+          type="button"
+          role="tab"
+          id="tab-my-section"
+          aria-selected={view === "section"}
+          aria-controls="panel-my-section"
+          className={view === "section" ? "is-selected" : ""}
+          onClick={() => setView("section")}
+        >
+          My section
+        </button>
+        <button
+          type="button"
+          role="tab"
+          id="tab-picture-book"
+          aria-selected={view === "picture-book"}
+          aria-controls="panel-picture-book"
+          className={view === "picture-book" ? "is-selected" : ""}
+          onClick={() => setView("picture-book")}
+        >
+          Picture book
+          {missingPhotos.length > 0 ? <span className="lb-tab-meta">{missingPhotos.length} missing</span> : null}
+        </button>
+      </div>
+
+      {view === "picture-book" ? (
+        <section id="panel-picture-book" role="tabpanel" aria-labelledby="tab-picture-book">
+          <h2 id="picture-book-heading" className="lb-group">
+            Picture book
+            <span>{lines.length}</span>
+          </h2>
+          <p className="lb-note">
+            Visual identification for this section: a picture plus the line’s identification. Not a hand receipt.
+            Official nomenclature stays on the line, next to the picture. A stencil is not a photo.
+          </p>
+          <PictureGroup title="Missing picture" lines={missingPhotos} selectedId={selectedId} onOpen={setSelectedId} />
+          <PictureGroup title="Picture on file" lines={withPhotos} selectedId={selectedId} onOpen={setSelectedId} />
+          {selected ? <PictureIdentity line={selected} /> : null}
+        </section>
+      ) : null}
+
+      {view === "section" ? (
+      <div id="panel-my-section" role="tabpanel" aria-labelledby="tab-my-section" className="lb">
       <section aria-labelledby="shr-months">
         <div className="lb-section-head">
           <h2 id="shr-months" className="lb-group">
             Monthly Sub-hand receipts
-            <span>{cells.filter((cell) => cell.state === "uploaded").length}</span>
+            <span>
+              {uploadedMonthCount} uploaded {uploadedMonthCount === 1 ? "month" : "months"}
+            </span>
           </h2>
           <label className="lb-year-select">
-            <span className="sr-only">Year</span>
+            <span>Year</span>
             <select
-              aria-label="Sub-hand receipt year"
               value={year}
               onChange={(event) => setYear(Number(event.target.value))}
             >
@@ -193,19 +247,6 @@ export function SectionWorkspace({
         </div>
       </section>
 
-      <section aria-labelledby="picture-book-heading">
-        <h2 id="picture-book-heading" className="lb-group">
-          Picture book
-          <span>{lines.length}</span>
-        </h2>
-        <p className="lb-note">
-          {sectionShrLabel(sectionLetter)} visual ID. Official nomenclature stays on the line. A stencil is not a
-          photo.
-        </p>
-        <PictureGroup title="Missing picture" lines={missingPhotos} onOpen={setSelectedId} />
-        <PictureGroup title="Picture on file" lines={withPhotos} onOpen={setSelectedId} />
-      </section>
-
       <section aria-labelledby="totals-heading">
         <h2 id="totals-heading" className="lb-group">
           Property total
@@ -216,7 +257,10 @@ export function SectionWorkspace({
           <span>pieces from current hand-receipt line quantities</span>
         </p>
         <TrendChart points={points} />
-        <p className="lb-gap">{pieceTotalChartNote(totals.pieces, points)}</p>
+        <p className="lb-gap">
+          {pieceTotalChartNote(totals.pieces, points)}
+          {withoutPieceTotalNote ? ` ${withoutPieceTotalNote}` : ""}
+        </p>
       </section>
 
       <section aria-labelledby="movement-section" id="movement">
@@ -392,6 +436,15 @@ export function SectionWorkspace({
             </div>
             <div className="table-wrap">
             <table className="lb-table">
+              <colgroup>
+                <col className="lb-col-lin" />
+                <col className="lb-col-nomenclature" />
+                <col className="lb-col-actual" />
+                <col className="lb-col-nsn" />
+                <col className="lb-col-serial" />
+                <col className="lb-col-location" />
+                <col className="lb-col-status" />
+              </colgroup>
               <thead>
                 <tr>
                   {COLUMNS.map((column) => (
@@ -481,6 +534,8 @@ export function SectionWorkspace({
           )}
         </div>
       </section>
+      </div>
+      ) : null}
     </div>
   );
 }
@@ -488,10 +543,12 @@ export function SectionWorkspace({
 function PictureGroup({
   title,
   lines,
+  selectedId,
   onOpen,
 }: {
   title: string;
   lines: SectionLine[];
+  selectedId: string | null;
   onOpen: (id: string) => void;
 }) {
   return (
@@ -506,7 +563,12 @@ function PictureGroup({
         <ul className="lb-rows">
           {lines.map((line) => (
             <li key={line.id}>
-              <button type="button" className="lb-row" onClick={() => onOpen(line.id)}>
+              <button
+                type="button"
+                className={`lb-row ${selectedId === line.id ? "is-selected" : ""}`}
+                aria-pressed={selectedId === line.id}
+                onClick={() => onOpen(line.id)}
+              >
                 {line.photoSrc ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img className="lb-thumb" src={line.photoSrc} alt="" />
@@ -525,6 +587,32 @@ function PictureGroup({
         </ul>
       )}
     </>
+  );
+}
+
+function PictureIdentity({ line }: { line: SectionLine }) {
+  return (
+    <aside className="lb-detail" aria-label="Picture identification">
+      {line.photoSrc ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img className="lb-photo" src={line.photoSrc} alt="" />
+      ) : (
+        <p className="lb-photo is-empty">Missing picture</p>
+      )}
+      <p className="lb-kicker">{line.lin ?? "No LIN"}</p>
+      <h3>{line.actualName || "Actual name not recorded"}</h3>
+      <p>Official nomenclature: {line.nomenclature}</p>
+      <dl>
+        <div>
+          <dt>NSN</dt>
+          <dd>{line.nsn}</dd>
+        </div>
+        <div>
+          <dt>Serial number</dt>
+          <dd>{formatSerial(line.serial)}</dd>
+        </div>
+      </dl>
+    </aside>
   );
 }
 
@@ -583,6 +671,16 @@ function TrendChart({ points }: { points: PiecePoint[] }) {
       </table>
     </figure>
   );
+}
+
+function uploadedWithoutPieceTotalNote(months: Array<{ name: string; year: number }>): string | null {
+  if (months.length === 0) return null;
+  if (months.length === 1) {
+    const month = months[0];
+    return `${month.name} ${month.year}’s uploaded Sub-hand receipt has no stored piece total.`;
+  }
+  const list = months.map((month) => `${month.name} ${month.year}`).join(", ");
+  return `${list}: each uploaded Sub-hand receipt has no stored piece total.`;
 }
 
 function compareLines(a: SectionLine, b: SectionLine, sort: SortKey): number {
