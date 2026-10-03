@@ -47,6 +47,20 @@ export function stencilDataUri(commonName: string, officialName: string): string
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(stencilSvg(commonName, officialName))}`;
 }
 
+/** A generated stencil is a placeholder, not a picture-book photo. */
+export function hasStoredPicture(photoData: string | null | undefined): boolean {
+  if (!photoData) return false;
+  let decoded = photoData;
+  try {
+    decoded = decodeURIComponent(photoData);
+  } catch {
+    decoded = photoData;
+  }
+  if (decoded.includes("PICTURE BOOK") || decoded.includes("Visual ID only")) return false;
+  if (photoData.includes("PICTURE%20BOOK") || photoData.includes("Visual%20ID%20only")) return false;
+  return true;
+}
+
 export function asPhotoSrc(photoData: string | null | undefined, contentType?: string | null): string | null {
   if (!photoData) return null;
   if (photoData.startsWith("data:")) return photoData;

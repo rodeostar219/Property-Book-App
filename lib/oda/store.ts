@@ -538,6 +538,7 @@ export async function writeInject(input: {
   incoming: ElectronicShrLine[];
   actorName: string;
   notes?: string;
+  period?: { year: number; month: number };
 }): Promise<{ injectId: number; discrepancyKeys: string[] }> {
   if ((await ensureOdaStore()) !== "d1") {
     throw new Error("D1 is unavailable. Inject changes was not written.");
@@ -554,12 +555,24 @@ export async function writeInject(input: {
   const diff = diffElectronicShr(current, input.incoming);
   const counts = injectCounts(diff);
   const now = new Date().toISOString();
+  const pieces = input.incoming.reduce((sum, line) => sum + line.quantity, 0);
+  const period = input.period;
+  const periodTag = period
+    ? `shr-period:${period.year}-${String(period.month).padStart(2, "0")} shr-pieces:${pieces}`
+    : "";
+  const periodLabel = period
+    ? new Date(Date.UTC(period.year, period.month - 1, 1)).toLocaleString("en-US", {
+        month: "short",
+        year: "numeric",
+        timeZone: "UTC",
+      })
+    : now.slice(0, 10);
   const [inject] = await db
     .insert(shrInjects)
     .values({
       unitId: unit.id,
       sectionLetter: input.sectionLetter,
-      label: `${INJECT_LABEL} · ${SECTION_META[input.sectionLetter].name} · ${now.slice(0, 10)}`,
+      label: `${INJECT_LABEL} · ${SECTION_META[input.sectionLetter].name} · ${periodLabel}`,
       injectedAt: now,
       injectedBy: input.actorName,
       sourceKind: "electronic_shr",
@@ -568,9 +581,9 @@ export async function writeInject(input: {
       removedCount: counts.removedCount,
       changedCount: counts.changedCount,
       unchangedCount: counts.unchangedCount,
-      notes:
-        input.notes ??
-        "Electronic Sub-hand receipt (SHR) inject. Not Accept theater. Prior snapshots remain queryable.",
+      notes: [periodTag, input.notes ?? "Electronic Sub-hand receipt (SHR) inject. Not Accept theater. Prior snapshots remain queryable."]
+        .filter(Boolean)
+        .join(" "),
     })
     .returning();
 

@@ -1,0 +1,215 @@
+export const MONTH_LABELS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+] as const;
+
+export const MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+] as const;
+
+export type MonthState = "uploaded" | "missing" | "future";
+
+export type ShrInjectStamp = {
+  id: number;
+  sectionLetter: string | null;
+  label: string;
+  notes: string | null;
+  injectedAt: string;
+};
+
+export type MonthCell = {
+  year: number;
+  month: number;
+  label: string;
+  name: string;
+  state: MonthState;
+  injectId: number | null;
+};
+
+export type PiecePoint = {
+  year: number;
+  month: number;
+  pieces: number;
+  injectId: number;
+  /** Baseline snapshot lines, or a piece total written with the inject. */
+  source: "baseline" | "recorded";
+};
+
+const PERIOD_RE = /shr-period:(\d{4})-(\d{2})/;
+const PIECES_RE = /shr-pieces:(\d+)/;
+
+export function monthIndex(year: number, month: number): number {
+  return year * 12 + (month - 1);
+}
+
+export function validateMonthlyPeriod(year: number, month: number, now: Date): string | null {
+  if (!Number.isInteger(year) || year < 2000 || year > 2100) {
+    return "Year is not a valid Sub-hand receipt year. Nothing was saved.";
+  }
+  if (!Number.isInteger(month) || month < 1 || month > 12) {
+    return "Month is not valid. Nothing was saved.";
+  }
+  if (monthIndex(year, month) > monthIndex(now.getUTCFullYear(), now.getUTCMonth() + 1)) {
+    return "That month is still in the future. Nothing was saved.";
+  }
+  return null;
+}
+
+export function isBaselineSnapshot(inject: { label: string; notes: string | null }): boolean {
+  return (
+    inject.label.includes("01 Sep 26 baseline") ||
+    (inject.notes ?? "").includes("Fixture snapshot") ||
+    (inject.notes ?? "").includes("Seeded electronic Sub-hand receipt")
+  );
+}
+
+export function injectPeriod(inject: ShrInjectStamp): { year: number; month: number } | null {
+  const tagged = inject.notes?.match(PERIOD_RE);
+  if (tagged) {
+    return { year: Number(tagged[1]), month: Number(tagged[2]) };
+  }
+  const date = new Date(inject.injectedAt);
+  if (Number.isNaN(date.getTime())) return null;
+  return { year: date.getUTCFullYear(), month: date.getUTCMonth() + 1 };
+}
+
+export function recordedPieces(inject: ShrInjectStamp): number | null {
+  const tagged = inject.notes?.match(PIECES_RE);
+  if (!tagged) return null;
+  const pieces = Number(tagged[1]);
+  return Number.isInteger(pieces) && pieces >= 0 ? pieces : null;
+}
+
+export function classifyMonth(
+  year: number,
+  month: number,
+  now: Date,
+  uploaded: boolean,
+): MonthState {
+  if (uploaded) return "uploaded";
+  if (monthIndex(year, month) > monthIndex(now.getUTCFullYear(), now.getUTCMonth() + 1)) {
+    return "future";
+  }
+  return "missing";
+}
+
+export function yearMonthCells(
+  year: number,
+  injects: ShrInjectStamp[],
+  sectionLetter: string,
+  now: Date,
+): MonthCell[] {
+  const mine = injects.filter((row) => row.sectionLetter === sectionLetter);
+  return MONTH_LABELS.map((label, index) => {
+    const month = index + 1;
+    const matches = mine.filter((row) => {
+      const period = injectPeriod(row);
+      return period?.year === year && period.month === month;
+    });
+    const latest = [...matches].sort((a, b) => {
+      const byTime = a.injectedAt.localeCompare(b.injectedAt);
+      return byTime !== 0 ? byTime : a.id - b.id;
+    }).at(-1);
+    return {
+      year,
+      month,
+      label,
+      name: MONTH_NAMES[index],
+      state: classifyMonth(year, month, now, Boolean(latest)),
+      injectId: latest?.id ?? null,
+    };
+  });
+}
+
+/**
+ * Piece totals only where a monthly record actually stores one.
+ * A baseline snapshot uses that snapshot's line quantities.
+ * A later inject in the same month without shr-pieces blocks the baseline
+ * so a change feed is not treated as a census.
+ */
+export function monthlyPiecePoints(
+  injects: ShrInjectStamp[],
+  sectionLetter: string,
+  baselinePieces: number | null,
+): PiecePoint[] {
+  const mine = injects.filter((row) => row.sectionLetter === sectionLetter);
+  const buckets = new Map<string, ShrInjectStamp[]>();
+  for (const row of mine) {
+    const period = injectPeriod(row);
+    if (!period) continue;
+    const key = `${period.year}-${String(period.month).padStart(2, "0")}`;
+    const list = buckets.get(key) ?? [];
+    list.push(row);
+    buckets.set(key, list);
+  }
+
+  const points: PiecePoint[] = [];
+  for (const [key, rows] of buckets) {
+    const [yearText, monthText] = key.split("-");
+    const year = Number(yearText);
+    const month = Number(monthText);
+    const withPieces = rows
+      .map((row) => ({ row, pieces: recordedPieces(row) }))
+      .filter((entry): entry is { row: ShrInjectStamp; pieces: number } => entry.pieces !== null)
+      .sort((a, b) => a.row.injectedAt.localeCompare(b.row.injectedAt) || a.row.id - b.row.id);
+    const recorded = withPieces.at(-1);
+    if (recorded) {
+      points.push({
+        year,
+        month,
+        pieces: recorded.pieces,
+        injectId: recorded.row.id,
+        source: "recorded",
+      });
+      continue;
+    }
+    const baselineOnly = rows.length > 0 && rows.every((row) => isBaselineSnapshot(row));
+    if (baselineOnly && baselinePieces !== null) {
+      const latest = [...rows].sort((a, b) => a.injectedAt.localeCompare(b.injectedAt) || a.id - b.id).at(-1);
+      if (!latest) continue;
+      points.push({
+        year,
+        month,
+        pieces: baselinePieces,
+        injectId: latest.id,
+        source: "baseline",
+      });
+    }
+  }
+
+  return points.sort((a, b) => monthIndex(a.year, a.month) - monthIndex(b.year, b.month));
+}
+
+/** Connect a line only across adjacent recorded months. A gap is not a zero. */
+export function adjacentPointPairs(points: Array<{ year: number; month: number }>): Array<[number, number]> {
+  const pairs: Array<[number, number]> = [];
+  for (let index = 1; index < points.length; index += 1) {
+    const previous = points[index - 1];
+    const current = points[index];
+    if (monthIndex(current.year, current.month) - monthIndex(previous.year, previous.month) === 1) {
+      pairs.push([index - 1, index]);
+    }
+  }
+  return pairs;
+}

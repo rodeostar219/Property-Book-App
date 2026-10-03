@@ -8,6 +8,7 @@ import { DisabledAction } from "@/components/ledger/disabled-action";
 import { Button } from "@/components/ui/button";
 import { INJECT_BUTTON_LABEL, INJECT_FEED_LABEL, NOT_WIRED } from "@/lib/ledger/copy";
 import { injectSectionChanges, type ActionResult } from "@/lib/oda/actions";
+import { MONTH_NAMES, validateMonthlyPeriod } from "@/lib/oda/months";
 import type { PersistenceMode } from "@/lib/oda/store";
 import type { SectionLetter } from "@/lib/oda/types";
 
@@ -15,22 +16,35 @@ export function InjectPanel({
   sectionLetter,
   persistence,
   canEdit,
+  nowIso,
 }: {
   sectionLetter: SectionLetter;
   persistence: PersistenceMode;
   canEdit: boolean;
+  nowIso: string;
 }) {
   const router = useRouter();
+  const now = new Date(nowIso);
+  const [year, setYear] = useState(String(now.getUTCFullYear()));
+  const [month, setMonth] = useState("");
   const [payload, setPayload] = useState("");
   const [result, setResult] = useState<ActionResult | null>(null);
   const [pending, startTransition] = useTransition();
   const blocked = persistence !== "d1" || !canEdit;
+  const periodError = month === "" ? null : validateMonthlyPeriod(Number(year), Number(month), now);
+  const periodReady = month !== "" && !periodError;
 
   function run(useCanned: boolean) {
+    if (!periodReady) {
+      const message = periodError ?? "Month and year are required for a monthly Sub-hand receipt. Nothing was saved.";
+      setResult({ ok: false, message });
+      return;
+    }
     startTransition(async () => {
       const next = await injectSectionChanges(
         sectionLetter,
         useCanned ? undefined : payload,
+        { year: Number(year), month: Number(month) },
       );
       setResult(next);
       if (next.ok && next.injectId) {
@@ -52,6 +66,48 @@ export function InjectPanel({
         </div>
       </div>
       <div className="inject-body">
+        <p className="lb-gap">
+          Review: section {sectionLetter} monthly Sub-hand receipt
+          {month ? ` for ${MONTH_NAMES[Number(month) - 1]} ${year}` : ""}. This writes a versioned
+          update in this workspace. It is not Accept theater.
+        </p>
+        <div className="lb-period">
+          <label>
+            Month
+            <select
+              aria-label="Sub-hand receipt month"
+              value={month}
+              onChange={(event) => setMonth(event.target.value)}
+              disabled={pending}
+            >
+              <option value="">Select month</option>
+              {MONTH_NAMES.map((name, index) => (
+                <option key={name} value={String(index + 1)}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Year
+            <select
+              aria-label="Sub-hand receipt year"
+              value={year}
+              onChange={(event) => setYear(event.target.value)}
+              disabled={pending}
+            >
+              {[0, 1, 2].map((offset) => {
+                const value = now.getUTCFullYear() - offset;
+                return (
+                  <option key={value} value={String(value)}>
+                    {value}
+                  </option>
+                );
+              })}
+            </select>
+          </label>
+        </div>
+        {periodError ? <p className="action-result fail">{periodError}</p> : null}
         <label>
           Optional electronic SHR JSON
           <textarea
@@ -74,7 +130,7 @@ export function InjectPanel({
             </>
           ) : (
             <>
-              <Button type="button" onClick={() => run(!payload.trim())} disabled={pending}>
+              <Button type="button" onClick={() => run(!payload.trim())} disabled={pending || !periodReady}>
                 <UploadCloud />
                 {INJECT_BUTTON_LABEL}
               </Button>

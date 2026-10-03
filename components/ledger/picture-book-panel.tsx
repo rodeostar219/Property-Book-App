@@ -6,7 +6,7 @@ import { ActionResultNote } from "@/components/ledger/action-result";
 import { DisabledAction } from "@/components/ledger/disabled-action";
 import { Button } from "@/components/ui/button";
 import { replaceLinePhoto, updateCommonName, type ActionResult } from "@/lib/oda/actions";
-import { PICTURE_BOOK_NOTICE } from "@/lib/oda/picture-book";
+import { PICTURE_BOOK_NOTICE, hasStoredPicture } from "@/lib/oda/picture-book";
 import type { PersistenceMode } from "@/lib/oda/store";
 import type { LayeredLine } from "@/lib/oda/workspace";
 
@@ -46,13 +46,17 @@ export function PictureBookPanel({
       </div>
       <div className="picture-book-grid">
         <figure>
-          {line.photoData ? (
+          {hasStoredPicture(line.photoData) && line.photoData ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={line.photoData} alt={`${line.commonName ?? line.name} visual ID`} />
           ) : (
-            <div className="photo-empty">No photo on this line</div>
+            <div className="photo-empty">No picture-book photo</div>
           )}
-          <figcaption>Photo replace does not invent accountability</figcaption>
+          <figcaption>
+            {hasStoredPicture(line.photoData)
+              ? "Photo replace does not invent accountability"
+              : "No picture-book photo is stored. A generated stencil is not a photo and does not change accountability."}
+          </figcaption>
         </figure>
         <div className="picture-book-fields">
           <label>

@@ -4,7 +4,7 @@ import { detectSourceConflicts, type SourceFact } from "./discrepancy";
 import { identityKey } from "./identity-key";
 import { ODA, sectionShrLabel } from "./org";
 import { PEOPLE } from "./people";
-import { asPhotoSrc, stencilDataUri } from "./picture-book";
+import { asPhotoSrc, hasStoredPicture, stencilDataUri } from "./picture-book";
 import {
   SECTION_LETTERS,
   SECTION_META,
@@ -342,10 +342,12 @@ export function signedForAdditionItem(line: AcceptedSignedForLine): PropertyItem
     : PEOPLE.ortiz;
   return {
     id: `da2062-${line.importId}-${identityKey(line)}`,
+    lin: line.lin,
     nsn: line.nsn,
     name: line.officialName ?? line.nomenclature,
     officialName: line.officialName ?? line.nomenclature,
-    commonName: line.actualName,
+    commonName: line.actualName ?? undefined,
+    hasPictureBookPhoto: hasStoredPicture(line.photoData),
     serial: line.serial,
     quantityRequired: line.quantity,
     quantityOnHand: line.quantity,

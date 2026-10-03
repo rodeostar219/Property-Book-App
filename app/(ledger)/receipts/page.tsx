@@ -41,7 +41,12 @@ export default async function ReceiptsPage() {
       {current ? <PhrhChrome source={current} /> : null}
       {shr ? <PhrhChrome source={shr} compact /> : null}
 
-      <InjectPanel sectionLetter="E" persistence={workspace.persistence} canEdit />
+      <InjectPanel
+        sectionLetter="E"
+        persistence={workspace.persistence}
+        canEdit
+        nowIso={new Date().toISOString()}
+      />
 
       <section className="panel month-compare">
         <div className="panel-head">

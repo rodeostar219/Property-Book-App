@@ -50,10 +50,13 @@ export type ComponentLine = {
 
 export type PropertyItem = {
   id: string;
+  lin: string | null;
   nsn: string;
   name: string;
   officialName?: string;
   commonName?: string;
+  /** True only for a stored picture-book photo. Generated stencils do not count. */
+  hasPictureBookPhoto: boolean;
   serial: string | null;
   quantityRequired: number;
   quantityOnHand: number;

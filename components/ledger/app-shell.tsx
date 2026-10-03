@@ -3,12 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useTransition } from "react";
-import { CheckCircle2, ChevronDown, ClipboardCheck, Download, Menu } from "lucide-react";
-import { DisabledAction } from "@/components/ledger/disabled-action";
-import { Progress } from "@/components/ui/progress";
-import { NOT_WIRED, UNIT } from "@/lib/ledger/copy";
+import { ClipboardCheck, Menu } from "lucide-react";
 import { setDemoIdentity } from "@/lib/ledger/demo-role";
-import { navForRole, pageTitleForPath } from "@/lib/ledger/nav";
+import { isNavActive, navGroupsForRole, pageTitleForPath } from "@/lib/ledger/nav";
+import { ODA } from "@/lib/oda/org";
 import type { Actor, DemoIdentity } from "@/lib/ledger/types";
 
 type Props = {
@@ -31,7 +29,7 @@ export function AppShell({
   const pathname = usePathname();
   const [mobile, setMobile] = useState(false);
   const [pending, startTransition] = useTransition();
-  const nav = navForRole(actor.role);
+  const groups = navGroupsForRole(actor.role);
   const title = pageTitleForPath(pathname);
   const roleLabel =
     actor.identity === "pm"
@@ -48,54 +46,55 @@ export function AppShell({
 
   return (
     <div className="shell">
+      <a className="skip" href="#content">
+        Skip to content
+      </a>
+      {mobile ? (
+        <button className="sidebar-scrim" aria-label="Close menu" onClick={() => setMobile(false)} />
+      ) : null}
       <aside className={`sidebar ${mobile ? "open" : ""}`}>
         <div className="brand">
           <span>
             <ClipboardCheck />
           </span>
           <div>
-            <b>ODA WORKSPACE</b>
+            <b>ODA-1223</b>
             <small>
-              {UNIT.uic} · {UNIT.name} · {UNIT.installation}
+              {ODA.uic} · {ODA.installation}
             </small>
           </div>
         </div>
-        <nav>
-          {nav.map((item) => {
-            const Icon = item.icon;
-            const active =
-              item.href === "/"
-                ? pathname === "/"
-                : pathname === item.href || pathname.startsWith(`${item.href}/`);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={active ? "active" : ""}
-                onClick={() => setMobile(false)}
-              >
-                <Icon />
-                <span>{item.label}</span>
-                {item.badgeKey === "exceptions" && exceptionCount > 0 ? (
-                  <em>{exceptionCount}</em>
-                ) : null}
-              </Link>
-            );
-          })}
+        <nav aria-label="Primary">
+          {groups.map((group) => (
+            <div key={group.id} className="nav-group">
+              <small>{group.label}</small>
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                const active = isNavActive(item.href, pathname);
+                const badge = item.badgeKey === "exceptions" ? exceptionCount : 0;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={active ? "active" : ""}
+                    aria-current={active ? "page" : undefined}
+                    onClick={() => setMobile(false)}
+                  >
+                    <Icon />
+                    <span>{item.label}</span>
+                    {badge > 0 ? <em>{badge}</em> : null}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
         </nav>
         <div className="accountability">
-          <small>ODA HAND RECEIPT</small>
+          <small>HAND RECEIPT</small>
           <strong>
-            {UNIT.receiptLabel} · {UNIT.document}
+            {ODA.document} · PHRH {ODA.phrhName}
           </strong>
-          <p>
-            {UNIT.group} · PHRH {UNIT.name === "ODA-1223" ? "CPT A. Reyes" : "PHRH"}
-          </p>
-          <div>
-            <span>Companion workspace</span>
-            <b>not SoR</b>
-          </div>
-          <Progress value={100} />
+          <p>Companion to GCSS-Army. Not a system of record.</p>
         </div>
         <div className="user">
           <span>{actor.initials}</span>
@@ -106,35 +105,28 @@ export function AppShell({
               {roleLabel}
             </small>
           </div>
-          <ChevronDown />
         </div>
         <form className="role-switch">
           <small>Demo identity</small>
           <div className="identity-switch">
-            <button
-              type="button"
-              disabled={pending || actor.identity === "echo"}
-              className={actor.identity === "echo" ? "selected" : ""}
-              onClick={() => switchIdentity("echo")}
-            >
-              Echo
-            </button>
-            <button
-              type="button"
-              disabled={pending || actor.identity === "bravo"}
-              className={actor.identity === "bravo" ? "selected" : ""}
-              onClick={() => switchIdentity("bravo")}
-            >
-              Bravo
-            </button>
-            <button
-              type="button"
-              disabled={pending || actor.identity === "pm"}
-              className={actor.identity === "pm" ? "selected" : ""}
-              onClick={() => switchIdentity("pm")}
-            >
-              ODA
-            </button>
+            {(
+              [
+                ["echo", "Echo"],
+                ["bravo", "Bravo"],
+                ["pm", "ODA"],
+              ] as const
+            ).map(([identity, label]) => (
+              <button
+                key={identity}
+                type="button"
+                disabled={pending || actor.identity === identity}
+                className={actor.identity === identity ? "selected" : ""}
+                aria-pressed={actor.identity === identity}
+                onClick={() => switchIdentity(identity)}
+              >
+                {label}
+              </button>
+            ))}
           </div>
           {signedIn ? (
             <a href={signOutHref} target="_top">
@@ -148,38 +140,24 @@ export function AppShell({
         </form>
       </aside>
       <main>
-        <header>
-          <button
-            className="hamburger"
-            aria-label="Open menu"
-            onClick={() => setMobile(!mobile)}
-          >
+        <header className="topbar">
+          <button className="hamburger" aria-label="Open menu" onClick={() => setMobile(true)}>
             <Menu />
           </button>
-          <div>
-            <p>1ST SFG (A) · JBLM · OPERATIONAL PROPERTY</p>
-            <h1>{title}</h1>
-          </div>
-          <div className="header-actions">
-            <DisabledAction
-              label="Export"
-              reason={NOT_WIRED.export}
-              icon={<Download />}
-              variant="outline"
-            />
-          </div>
+          <nav className="crumbs" aria-label="Breadcrumb">
+            <Link href="/">{ODA.name}</Link>
+            <span aria-hidden="true">/</span>
+            <span>{title}</span>
+          </nav>
         </header>
-        <div className="content">{children}</div>
+        <div className="content" id="content">
+          {children}
+        </div>
       </main>
     </div>
   );
 }
 
 export function CurrentBadge({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="current">
-      <CheckCircle2 />
-      {children}
-    </span>
-  );
+  return <span className="current">{children}</span>;
 }
