@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { Da2062InPanel } from "@/components/ledger/da2062-in-panel";
 import { InjectPanel } from "@/components/ledger/inject-panel";
 import {
@@ -12,7 +11,6 @@ import {
   ODA_MONTHLY_SHR_GAP,
 } from "@/lib/oda/overview";
 import { MONTH_NAMES, validateMonthlyPeriod } from "@/lib/oda/months";
-import { ODA } from "@/lib/oda/org";
 import { SECTION_META, type Da2062DestinationKind, type SectionLetter } from "@/lib/oda/types";
 import type { Actor } from "@/lib/ledger/types";
 import type { PersistenceMode } from "@/lib/oda/store";
@@ -82,13 +80,6 @@ export function ImportHub({
 
   return (
     <div className="lb">
-      <header className="lb-toolbar">
-        <nav className="crumbs" aria-label="Breadcrumb">
-          <Link href="/">{ODA.name}</Link>
-          <span aria-hidden="true">/</span>
-          <span>Import (SHR, 2062, BOM)</span>
-        </nav>
-      </header>
       <p className="lb-note">{DA2062_IN_DIRECTION}</p>
       <p className="lb-note">{DA2062_OUT_DIRECTION}</p>
 

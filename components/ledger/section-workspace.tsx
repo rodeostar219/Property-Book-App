@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ODA, sectionShrLabel } from "@/lib/oda/org";
+import { sectionShrLabel } from "@/lib/oda/org";
 import {
   MONTHLY_CENSUS_NOTE,
   MOVEMENT_ROWS,
@@ -53,7 +53,6 @@ const COLUMNS = ["LIN", "Nomenclature", "Actual name", "NSN", "Serial number", "
 
 export function SectionWorkspace({
   sectionLetter,
-  sectionName,
   lines,
   injects,
   baselinePieces,
@@ -62,7 +61,6 @@ export function SectionWorkspace({
   movement,
 }: {
   sectionLetter: SectionLetter;
-  sectionName: string;
   lines: SectionLine[];
   injects: ShrInjectStamp[];
   baselinePieces: number;
@@ -144,140 +142,6 @@ export function SectionWorkspace({
 
   return (
     <div className="lb">
-      <div className="lb-toolbar">
-        <nav className="crumbs" aria-label="Breadcrumb">
-          <Link href="/">{ODA.name}</Link>
-          <span aria-hidden="true">/</span>
-          <Link href="/my-property">My section</Link>
-          <span aria-hidden="true">/</span>
-          <span>{sectionName}</span>
-        </nav>
-        <div className="lb-tabs" role="tablist" aria-label="Property views">
-          {(
-            [
-              ["all", "All"],
-              ["missing-picture", "Missing picture"],
-              ["needs-serial", "Needs serial"],
-            ] as const
-          ).map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              role="tab"
-              aria-selected={tab === id}
-              className={tab === id ? "is-selected" : ""}
-              onClick={() => setTab(id)}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        <div className="lb-toolbar-tools">
-          <label className="lb-search">
-            <span className="sr-only">Search property</span>
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search LIN, name, NSN, serial"
-              aria-label="Search LIN, nomenclature, actual name, NSN, or serial"
-            />
-          </label>
-          <div className="lb-pop">
-            <button
-              type="button"
-              aria-expanded={filterOpen}
-              aria-controls="property-filter"
-              onClick={() => {
-                setFilterOpen((open) => !open);
-                setDisplayOpen(false);
-              }}
-            >
-              Filter{filterCount ? ` ${filterCount}` : ""}
-            </button>
-            {filterOpen ? (
-              <div id="property-filter" className="lb-menu" role="dialog" aria-label="Filter">
-                <label>
-                  Status
-                  <select value={status} onChange={(event) => setStatus(event.target.value as typeof status)}>
-                    <option value="any">Any status</option>
-                    <option value="signed_for">Signed for</option>
-                    <option value="on_hand">On hand</option>
-                    <option value="needs_serial_check">Needs serial</option>
-                    <option value="shortage_recorded">Shortage</option>
-                  </select>
-                </label>
-                <label>
-                  Serial number
-                  <select value={serial} onChange={(event) => setSerial(event.target.value as typeof serial)}>
-                    <option value="any">Any</option>
-                    <option value="missing">Not recorded</option>
-                    <option value="recorded">Recorded</option>
-                  </select>
-                </label>
-                <label>
-                  Location
-                  <select value={location} onChange={(event) => setLocation(event.target.value)}>
-                    <option value="any">Any location</option>
-                    {locations.map((place) => (
-                      <option key={place} value={place}>
-                        {place}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStatus("any");
-                    setSerial("any");
-                    setLocation("any");
-                  }}
-                >
-                  Clear
-                </button>
-              </div>
-            ) : null}
-          </div>
-          <div className="lb-pop">
-            <button
-              type="button"
-              aria-expanded={displayOpen}
-              aria-controls="property-display"
-              onClick={() => {
-                setDisplayOpen((open) => !open);
-                setFilterOpen(false);
-              }}
-            >
-              Display
-            </button>
-            {displayOpen ? (
-              <div id="property-display" className="lb-menu" role="dialog" aria-label="Display options">
-                <label>
-                  Order
-                  <select value={sort} onChange={(event) => setSort(event.target.value as SortKey)}>
-                    {SORTS.map((option) => (
-                      <option key={option.id} value={option.id}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <fieldset>
-                  <legend>Fields</legend>
-                  {COLUMNS.map((column) => (
-                    <label key={column} className="lb-check">
-                      <input type="checkbox" checked disabled readOnly />
-                      {column}
-                    </label>
-                  ))}
-                  <p>These seven columns stay on the hand-receipt table.</p>
-                </fieldset>
-              </div>
-            ) : null}
-          </div>
-        </div>
-      </div>
-
       <section aria-labelledby="shr-months">
         <div className="lb-section-head">
           <h2 id="shr-months" className="lb-group">
@@ -408,7 +272,134 @@ export function SectionWorkspace({
           <span>{visible.length}</span>
         </h2>
         <div className="lb-split">
-          <div className="table-wrap">
+          <div>
+            <div className="lb-toolbar lb-table-toolbar">
+              <div className="lb-tabs" role="tablist" aria-label="Property table views">
+                {(
+                  [
+                    ["all", "All"],
+                    ["missing-picture", "Missing picture"],
+                    ["needs-serial", "Needs serial"],
+                  ] as const
+                ).map(([id, label]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    role="tab"
+                    aria-selected={tab === id}
+                    className={tab === id ? "is-selected" : ""}
+                    onClick={() => setTab(id)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <div className="lb-toolbar-tools">
+                <label className="lb-search">
+                  <span className="sr-only">Search property</span>
+                  <input
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    placeholder="Search LIN, name, NSN, serial"
+                    aria-label="Search LIN, nomenclature, actual name, NSN, or serial"
+                  />
+                </label>
+                <div className="lb-pop">
+                  <button
+                    type="button"
+                    aria-expanded={filterOpen}
+                    aria-controls="property-filter"
+                    onClick={() => {
+                      setFilterOpen((open) => !open);
+                      setDisplayOpen(false);
+                    }}
+                  >
+                    Filter{filterCount ? ` ${filterCount}` : ""}
+                  </button>
+                  {filterOpen ? (
+                    <div id="property-filter" className="lb-menu" role="dialog" aria-label="Filter">
+                      <label>
+                        Status
+                        <select value={status} onChange={(event) => setStatus(event.target.value as typeof status)}>
+                          <option value="any">Any status</option>
+                          <option value="signed_for">Signed for</option>
+                          <option value="on_hand">On hand</option>
+                          <option value="needs_serial_check">Needs serial</option>
+                          <option value="shortage_recorded">Shortage</option>
+                        </select>
+                      </label>
+                      <label>
+                        Serial number
+                        <select value={serial} onChange={(event) => setSerial(event.target.value as typeof serial)}>
+                          <option value="any">Any</option>
+                          <option value="missing">Not recorded</option>
+                          <option value="recorded">Recorded</option>
+                        </select>
+                      </label>
+                      <label>
+                        Location
+                        <select value={location} onChange={(event) => setLocation(event.target.value)}>
+                          <option value="any">Any location</option>
+                          {locations.map((place) => (
+                            <option key={place} value={place}>
+                              {place}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setStatus("any");
+                          setSerial("any");
+                          setLocation("any");
+                        }}
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+                <div className="lb-pop">
+                  <button
+                    type="button"
+                    aria-expanded={displayOpen}
+                    aria-controls="property-display"
+                    onClick={() => {
+                      setDisplayOpen((open) => !open);
+                      setFilterOpen(false);
+                    }}
+                  >
+                    Display
+                  </button>
+                  {displayOpen ? (
+                    <div id="property-display" className="lb-menu" role="dialog" aria-label="Display options">
+                      <label>
+                        Order
+                        <select value={sort} onChange={(event) => setSort(event.target.value as SortKey)}>
+                          {SORTS.map((option) => (
+                            <option key={option.id} value={option.id}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <fieldset>
+                        <legend>Fields</legend>
+                        {COLUMNS.map((column) => (
+                          <label key={column} className="lb-check">
+                            <input type="checkbox" checked disabled readOnly />
+                            {column}
+                          </label>
+                        ))}
+                        <p>These seven columns stay on the hand-receipt table.</p>
+                      </fieldset>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+            <div className="table-wrap">
             <table className="lb-table">
               <thead>
                 <tr>
@@ -456,6 +447,7 @@ export function SectionWorkspace({
                 )}
               </tbody>
             </table>
+            </div>
           </div>
           {selected ? (
             <aside className="lb-detail" id="line-detail" aria-label="Line detail">

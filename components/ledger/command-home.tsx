@@ -28,16 +28,9 @@ export function CommandHome({
 
   return (
     <div className="lb">
-      <header className="lb-toolbar">
-        <nav className="crumbs" aria-label="Breadcrumb">
-          <Link href="/">{ODA.name}</Link>
-          <span aria-hidden="true">/</span>
-          <span>Hand receipt</span>
-        </nav>
-        <p className="lb-note">
-          PHRH {ODA.phrhName} · {ODA.document} · companion to GCSS-Army / APSR. Not a system of record.
-        </p>
-      </header>
+      <p className="lb-note">
+        PHRH {ODA.phrhName} · {ODA.document} · companion to GCSS-Army / APSR. Not a system of record.
+      </p>
 
       <Link className="lb-total" href={bookHref}>
         <strong>{totals.pieces}</strong>
@@ -90,7 +83,9 @@ export function CommandHome({
                       {meta.mos} {meta.specialty}
                     </small>
                   </span>
-                  <span className="lb-chip">{count}</span>
+                  <span className="lb-chip">
+                    {count} {count === 1 ? "line" : "lines"}
+                  </span>
                 </Link>
               </li>
             );

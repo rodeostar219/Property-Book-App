@@ -19,7 +19,7 @@ export const DA2062_OUT_GAP =
   "DA Form 2062 OUT is not saved. OUT is property leaving this team or section for temporary custody with a person, a section, or an organization, and a return date is required. No OUT rows were written.";
 
 export const DA2062_IN_DIRECTION =
-  "2062 IN is property coming onto this team or section. The gaining party is the ODA hand receipt or a section Sub-hand receipt. Confirm writes signed-for lines in this workspace. It is not Accept theater, and it does not post GCSS-Army / the APSR.";
+  "2062 IN is property coming onto this team or section. The gaining party is the person or section accepting the property. The hand receipt is the record. Confirm writes signed-for lines in this workspace. It is not Accept theater, and it does not post GCSS-Army / the APSR.";
 
 export const DA2062_OUT_DIRECTION =
   "2062 OUT is the other direction: property leaving this team or section. Custody goes to a person, another section, or an organization, and a return date is required. OUT is not the same record as IN.";

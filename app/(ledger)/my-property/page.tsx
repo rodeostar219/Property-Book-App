@@ -4,7 +4,7 @@ import { getActor } from "@/lib/ledger/identity";
 import { canViewSection } from "@/lib/oda/access";
 import { injectPeriod } from "@/lib/oda/months";
 import { baselinePieceTotal } from "@/lib/oda/baseline";
-import { SECTION_LETTERS, SECTION_META, type SectionLetter } from "@/lib/oda/types";
+import { SECTION_LETTERS, type SectionLetter } from "@/lib/oda/types";
 import { hasStoredPicture } from "@/lib/oda/picture-book";
 import { loadWorkspace } from "@/lib/oda/workspace";
 
@@ -65,7 +65,6 @@ export default async function MyPropertyPage({
       <CompanionBanner persistence={workspace.persistence} />
       <SectionWorkspace
         sectionLetter={sectionLetter}
-        sectionName={SECTION_META[sectionLetter].name}
         lines={lines}
         injects={injects}
         baselinePieces={baselinePieceTotal(sectionLetter)}
